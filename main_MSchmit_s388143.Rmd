@@ -107,4 +107,7 @@ HCA analysis
 ```{r}
 hca_visualisation(AllData_enose_sens)
 ```
+```{r}
+hca_visualisation(AllData_HPLC_sens)
+```
 
