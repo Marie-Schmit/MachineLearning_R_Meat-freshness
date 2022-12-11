@@ -1,0 +1,124 @@
+---
+title: "Main script Schmits388143"
+author: "Marie Schmit"
+date: "2022-12-11"
+output: html_document
+---
+
+```{r}
+install.packages("pheatmap")
+```
+
+
+Load libraries and packages
+```{r}
+require("mixOmics")
+require("rgl")
+require("matlab")
+require("R.matlab")
+require("ptw")
+require("dplyr")
+require("class")
+require("gmodels")
+require("caret")
+require("rpart")
+require("rpart.plot")
+require("kernlab")
+require("MASS")
+require("grDevices")
+require("factoextra")
+require("cluster")
+require("ggplot2")
+require("RColorBrewer")
+
+library("pheatmap")
+```
+
+
+Functions are saved in a dedicated script.
+
+```{r}
+#Source the functions script
+source("functions_MSchmit_s388143.R")
+```
+
+# Data preparation and exploratory analysis
+Load data files and create datasets.
+
+```{r}
+enose <- read.table("Enose_data-1.csv", sep = ",", header = TRUE, row.names = 1)
+sensory <- read.table("Sensory_score-1.csv", sep = ",", header = TRUE, row.names = 1)
+counts <- read.table("Bacterial_Counts-1.csv", sep = ",", header = TRUE, row.names = 1)
+hplc <- read.table("HPLC_data-1.csv", sep = ",", header = TRUE, row.names = 1)
+```
+
+
+Combine all rows from the csv. Match the samples ID of HPLC and enose data with  sensory and bacterial counts data.
+```{r}
+# Merge enose and sensory
+AllData_enose_sens <- merge_data(enose, sensory, AllData_enose_sens)
+
+# Merge HPLC and sensory
+AllData_HPLC_sens <- merge_data(hplc, sensory, AllData_HPLC_sens)
+
+# Merge enose and counts
+AllData_enose_counts <- merge_data(enose, counts, AllData_enose_counts)
+
+#Merge HPLC and counts
+AllData_HPLC_counts <- merge_data(hplc, counts, AllData_HPLC_counts)
+
+# Sensory values for enose and HPLC
+AllData_enose_sens$sensory <- as.factor(AllData_enose_sens$sensory)
+AllData_HPLC_sens$sensory <- as.factor(AllData_HPLC_sens$sensory)
+
+sensory_enose <- AllData_enose_sens$sensory
+sensory_HPLC <- AllData_HPLC_sens$sensory
+
+# Samples ID
+samples <- rownames(AllData_enose_counts)
+```
+
+## PCA visualisation
+PCA of enose data grouped by sensors.
+```{r}
+pca.AllData_enose_sens <- pca_visualisation(pca.AllData_enose_sens, AllData_enose_sens, 3, sensory_enose, "lattice")
+
+```
+PCA of HPLC data grouped by sensors.
+```{r}
+pca.AllData_HPLC_sens <- pca_visualisation(pca.AllData_HPLC_sens, AllData_HPLC_sens, 3, sensory_HPLC, "lattice")
+
+```
+Create 3D PCA plots to better see all features.
+```{r}
+pca.AllData_enose_sens <- pca_visualisation(pca.AllData_enose_sens, AllData_enose_sens, 3, sensory_enose, "3d")
+pca.AllData_HPLC_sens <- pca_visualisation(pca.AllData_HPLC_sens, AllData_HPLC_sens, 3, sensory_HPLC, "3d")
+```
+
+Create biplots of pca model.
+```{r}
+pca_var(pca.AllData_enose_sens, sensory_enose, AllData_enose_sens)
+```
+
+```{r}
+pca_var(pca.AllData_HPLC_sens, sensory_HPLC, AllData_HPLC_sens)
+```
+HCA analysis
+```{r}
+# Distance matrix of Data without sensory column
+sampleDist_enose <- dist((subset(AllData_enose_sens, select = -c(sensory))))
+sampleDistMatrix <- as.matrix(sampleDist_enose)
+#Create color palette
+colors <- colorRampPalette(rev(brewer.pal(n = 7, name =
+  "RdYlBu")))(250)
+# Heatmap construction
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows = sampleDist_enose,
+         clustering_distance_cols = sampleDist_enose,
+         col = colors, main = "HCA analysis"
+         )
+```
+```{r}
+hca_visualisation(AllData_enose_sens)
+```
+
