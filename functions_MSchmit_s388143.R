@@ -47,7 +47,7 @@ hca_visualisation <- function(AllData){
   png(file = paste("Plots/heatmap_", main, ".png"))
   # Heatmap construction
   heatmap <- pheatmap(sampleDistMatrix,
-           clustering_distance_rows = sammpleDist,
+           clustering_distance_rows = sampleDist,
            clustering_distance_cols = sampleDist,
            col = colors, main = paste("HCA analysis", main),
            labels_col = All$sensory
