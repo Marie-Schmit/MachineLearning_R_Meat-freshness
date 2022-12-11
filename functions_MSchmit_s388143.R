@@ -36,7 +36,7 @@ pca_var <- function(pca.AllData, sensory, AllData){
 
 hca_visualisation <- function(AllData){
   # Distance matrix of Data without sensory column
-  sampleDist <- dist((subset(AllData, select = -c(sensory))))
+  sampleDist <- dist(AllData_enose_sens)
   sampleDistMatrix <- as.matrix(sampleDist)
   #Create color palette
   colors <- colorRampPalette(rev(brewer.pal(n = 7, name =

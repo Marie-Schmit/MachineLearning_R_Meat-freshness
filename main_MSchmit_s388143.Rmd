@@ -105,20 +105,6 @@ pca_var(pca.AllData_HPLC_sens, sensory_HPLC, AllData_HPLC_sens)
 ```
 HCA analysis
 ```{r}
-# Distance matrix of Data without sensory column
-sampleDist_enose <- dist(AllData_enose_sens)
-sampleDistMatrix <- as.matrix(sampleDist_enose)
-#Create color palette
-colors <- colorRampPalette(rev(brewer.pal(n = 7, name =
-  "RdYlBu")))(250)
-# Heatmap construction
-pheatmap(sampleDistMatrix,
-         clustering_distance_rows = sampleDist_enose,
-         clustering_distance_cols = sampleDist_enose,
-         col = colors, main = "HCA analysis"
-         )
-```
-```{r}
 hca_visualisation(AllData_enose_sens)
 ```
 
