@@ -106,6 +106,7 @@ pca_var(pca.AllData_HPLC_sens, sensory_HPLC, AllData_HPLC_sens)
 HCA analysis
 ```{r}
 hca_visualisation(AllData_enose_sens)
+hca_visualisation2(AllData_enose_sens)
 ```
 ```{r}
 hca_visualisation(AllData_HPLC_sens)

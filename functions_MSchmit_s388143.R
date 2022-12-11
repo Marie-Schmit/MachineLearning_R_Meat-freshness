@@ -36,7 +36,7 @@ pca_var <- function(pca.AllData, sensory, AllData){
 
 hca_visualisation <- function(AllData){
   # Distance matrix of Data without sensory column
-  sampleDist <- dist(AllData)
+  sampleDist <- dist(t(AllData[order(AllData$sensory),]))
   sampleDistMatrix <- as.matrix(sampleDist)
   #Create color palette
   colors <- colorRampPalette(rev(brewer.pal(n = 7, name =
@@ -49,6 +49,25 @@ hca_visualisation <- function(AllData){
            clustering_distance_rows = sampleDist,
            clustering_distance_cols = sampleDist,
            col = colors, main = paste("HCA analysis", main))
+  graphics.off()
+  return(heatmap)
+}
+
+hca_visualisation2 <- function(AllData){
+  # Distance matrix of Data without sensory column
+  sampleDist <- dist(AllData)
+  sampleDistMatrix <- as.matrix(sampleDist)
+  #Create color palette
+  colors <- colorRampPalette(rev(brewer.pal(n = 7, name =
+                                              "RdYlBu")))(250)
+  main <- deparse(substitute(AllData)) #Name the plot acording to AllData
+  #Save plot
+  png(file = paste("Plots/heatmap_", main, ".png"))
+  # Heatmap construction
+  heatmap <- pheatmap(sampleDistMatrix,
+                      clustering_distance_rows = sampleDist,
+                      clustering_distance_cols = sampleDist,
+                      col = colors, main = paste("HCA analysis", main))
   graphics.off()
   return(heatmap)
 }
