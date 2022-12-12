@@ -30,7 +30,7 @@ require("factoextra")
 require("cluster")
 require("ggplot2")
 require("RColorBrewer")
-
+require("graphics")
 library("pheatmap")
 ```
 
@@ -110,4 +110,40 @@ hca_visualisation(AllData_enose_sens)
 ```{r}
 hca_visualisation(AllData_HPLC_sens)
 ```
+
+```{r}
+pca_visualisation(pca.AllData_enose_sens, AllData_enose_sens, 3, sensory_enose, "lattice")
+```
+
+## 2. Bacterial counts against time for each temperature and bacteria
+
+```{r}
+# Add temperature and time columns to data frame counts of bacteria
+counts_temp_time <- temp_time(counts)
+```
+Plot each temperature: 0C in blue, 5C in green, 10C in orange, 15C in grey
+
+For each bacteria: TVC in full line, Pseudomonia in dot line.
+
+```{r}
+# Plot bacterial counts for each time for TVC
+ggplot(data = counts_temp_time, 
+       aes(x = as.numeric(counts_temp_time$Time), 
+           y = as.numeric(counts_temp_time$TVC))) +
+  #Color the lines by temperature
+  geom_line(aes(colour = counts_temp_time$Temperature)) +
+  #Add dashed lines for pseudomonads counts
+  geom_line(aes(y = as.numeric(counts_temp_time$Pseudomonads), 
+                colour = counts_temp_time$Temperature), linetype = "dashed") +
+  #Add labels
+  xlab("Time (in hours)")+
+  ylab("Bacterial count (Pseudomonads in dots)")+
+  ggtitle("Bacterial count per time and temperature")+
+  labs(color = "Temperature")
+
+#Save plot
+ggsave(filename = paste("Plots/CountsPerTime.png"))
+```
+
+
 

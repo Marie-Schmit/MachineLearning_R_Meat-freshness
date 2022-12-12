@@ -55,3 +55,19 @@ hca_visualisation <- function(AllData){
   graphics.off()
   return(heatmap)
 }
+
+#Save temperature and time (according to sample ID) in dataframe
+temp_time <- function(AllData){
+  #ID equal to list of temperature time
+  ID <- strsplit(row.names(AllData), "F")
+  Temperature <- c()
+  Time <- c()
+  for (i in 1:length(ID)){
+    Temperature <- append(Temperature, ID[[i]][1])
+    Time <- append(Time, ID[[i]][2])
+  }
+  AllData <- data.frame(AllData, Temperature, Time)
+  return(AllData)
+}
+
+  
