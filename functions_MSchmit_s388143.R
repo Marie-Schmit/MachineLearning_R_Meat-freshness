@@ -70,4 +70,20 @@ temp_time <- function(AllData){
   return(AllData)
 }
 
+
+# Function to partition dataset into train and test values
+## Return a list of two vectors (train and test)
+## perc_predict is the percentage of train data
+partition <- function(AllData, predict, perc_predict, times){  
+  set.seed(8)
+  #Preserve correspondance between numerical and categorical data (predictor and response respectively)
+  trainIndex <- createDataPartition(predict, p = perc_predict,
+                                    list = FALSE,
+                                    times = times)
   
+  trainSet <- AllData[trainIndex,]; testSet <- AllData[-trainIndex,]
+  #2 vectors containing test and train
+  trainCl <- as.factor(trainSet[, ncol(trainSet)])
+  testCl <- as.factor(testSet[, ncol(testSet)])
+  return(list(trainCl, testCl))
+}

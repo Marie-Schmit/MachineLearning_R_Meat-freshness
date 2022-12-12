@@ -167,4 +167,29 @@ ggplot(data = counts_temp_time, mapping = aes())+
 #Save plot
 ggsave(filename = paste("Plots/3_BoxPlot.png"))
 ```
+# Classification
+Partition the dataset with 7:3 optimisation
+
+```{r}
+#Use the function Partition to create a partition of data
+
+## Data from enose and sensory merged
+#Train data set
+train_enose_sens <- partition(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 1)[1]
+#Test data set
+test_enose_sens <- partition(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 1)[2]
+
+## Data from hplc and sensory merged
+#Train data set
+train_HPLC_sens <- partition(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 1)[1]
+#Test data set
+test_HPLC_sens <- partition(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 1)[2]
+```
+
+Perform classification for knn
+
+
+Perform classification for rf 
+
+Perform classification for svm-rd
 
