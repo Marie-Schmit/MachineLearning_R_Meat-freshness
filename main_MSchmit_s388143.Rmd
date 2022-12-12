@@ -67,6 +67,9 @@ AllData_enose_counts <- merge_data(enose, counts, AllData_enose_counts)
 #Merge HPLC and counts
 AllData_HPLC_counts <- merge_data(hplc, counts, AllData_HPLC_counts)
 
+#Merge sensory and counts
+AllData_counts_sens <- merge_data(counts, sensory, AllData_counts_sens)
+
 # Sensory values for enose and HPLC
 AllData_enose_sens$sensory <- as.factor(AllData_enose_sens$sensory)
 AllData_HPLC_sens$sensory <- as.factor(AllData_HPLC_sens$sensory)
@@ -119,10 +122,9 @@ pca_visualisation(pca.AllData_enose_sens, AllData_enose_sens, 3, sensory_enose, 
 
 ```{r}
 # Add temperature and time columns to data frame counts of bacteria
-counts_temp_time <- temp_time(counts)
+# We remove the samples F1a and F1b because we do not know their temperature
+counts_temp_time <- temp_time(AllData_counts_sens[-c(1,2),])
 ```
-Plot each temperature: 0C in blue, 5C in green, 10C in orange, 15C in grey
-
 For each bacteria: TVC in full line, Pseudomonia in dot line.
 
 ```{r}
@@ -142,8 +144,27 @@ ggplot(data = counts_temp_time,
   labs(color = "Temperature")
 
 #Save plot
-ggsave(filename = paste("Plots/CountsPerTime.png"))
+ggsave(filename = paste("Plots/2_CountsPerTime.png"))
 ```
 
+## 3. Boxplots of bacterial counts for each type of bacteria against sensory score
 
+```{r}
+ggplot(data = counts_temp_time, mapping = aes())+
+  #Boxes for TVC
+  geom_boxplot(aes(group = counts_temp_time$sensory, y = counts_temp_time$TVC, x = counts_temp_time$sensory-0.25, colour = "TVC"), width = 0.4)+
+  #Boxes for pseudomonas
+  geom_boxplot(aes(group = counts_temp_time$sensory, y = counts_temp_time$Pseudomonads, x = counts_temp_time$sensory+0.25, colour = "Pseudomonads"), width = 0.4)+
+  #Create legend
+  scale_color_manual("",
+                     breaks = c("TVC", "Pseudomonads"),
+                     values = c("Salmon", "Steelblue"))+
+  # Set axis labels
+  xlab("TVC counts")+
+  ylab("Sensory")+
+  ggtitle("Boxplots of bacterial counts against sensory")
+
+#Save plot
+ggsave(filename = paste("Plots/3_BoxPlot.png"))
+```
 
