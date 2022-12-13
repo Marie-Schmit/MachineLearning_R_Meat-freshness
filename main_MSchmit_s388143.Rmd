@@ -6,7 +6,8 @@ output: html_document
 ---
 
 ```{r}
-install.packages("pheatmap")
+#install.packages("pheatmap")
+#install.packages("caret")
 ```
 
 
@@ -31,6 +32,7 @@ require("cluster")
 require("ggplot2")
 require("RColorBrewer")
 require("graphics")
+require("caret")
 library("pheatmap")
 ```
 
@@ -174,22 +176,54 @@ Partition the dataset with 7:3 optimisation
 #Use the function Partition to create a partition of data
 
 ## Data from enose and sensory merged
-#Train data set
-train_enose_sens <- partition(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 1)[1]
-#Test data set
-test_enose_sens <- partition(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 1)[2]
+#Partition data
+part_enose_sens <- partition(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 1)
 
 ## Data from hplc and sensory merged
-#Train data set
-train_HPLC_sens <- partition(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 1)[1]
-#Test data set
-test_HPLC_sens <- partition(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 1)[2]
+# Partition data
+part_HPLC_sens <- partition(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 1)
 ```
 
-Perform classification for knn
+## Knn classification
+Perform classification for knn on HPLC data merged with sens.
+```{r}
+#Optimisation of k without scaling
+optimal <- knn.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, 20, c())
+
+optimal
+
+plot(x = c(1:20), y = optimal$k.accuracies, type='l', 
+           main = "Accuracy by k without scale")
+
+#Optimisation of scale methods and k values
+optimal <- knn.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, 20, c("center", "scale", "range"))
+
+optimal
+# Delete variable optimal
+rm(optimal)
+```
+
+```{r}
+accur<-accuracy.cp(model.tree, testSet, testCl) 
+array.of.cp <- seq(from = 0.01, to = 0.1, by = 0.01)
+
+x11()
+plot(array.of.cp, accur, type='l')
+```
+
+
+### Model training
+```{r}
+
+```
 
 
 Perform classification for rf 
 
 Perform classification for svm-rd
+
+
+```{r}
+knn.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, 20)
+```
 

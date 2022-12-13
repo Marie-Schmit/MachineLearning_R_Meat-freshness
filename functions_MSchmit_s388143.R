@@ -80,10 +80,83 @@ partition <- function(AllData, predict, perc_predict, times){
   trainIndex <- createDataPartition(predict, p = perc_predict,
                                     list = FALSE,
                                     times = times)
-  
-  trainSet <- AllData[trainIndex,]; testSet <- AllData[-trainIndex,]
-  #2 vectors containing test and train
+  trainSet <- AllData[trainIndex,]
+  print(ncol(trainSet))
+  testSet <- AllData[-trainIndex,]
+  #Two vectors containing test and train
   trainCl <- as.factor(trainSet[, ncol(trainSet)])
   testCl <- as.factor(testSet[, ncol(testSet)])
-  return(list(trainCl, testCl))
+  return(list(trainSet = trainSet,
+              testSet = testSet,
+              trainCl = trainCl,
+              testCl = testCl))
+}
+
+############################# Classification #########################
+######### knn #########
+#Model training and optimisation: find the best scale and k parameter
+knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMethod){
+  #Remove the class variable of the train and test sets
+  trainSet.knn <- trainSet[, -ncol(trainSet)]
+  testSet.knn <- testSet[, -ncol(testSet)]
+  
+  #Variable initialisation
+  k.accuracies <- c()
+  bestAccuracy <- 0
+
+  # Find best k without scaling
+  # test of k values from 1 to 20
+  
+  for (k in 1:n) {
+    model.k<-knn(trainSet, testSet, trainCl, k)
+    confusion.matrix <- confusionMatrix(model.k, testCl, positive="1")
+    modelAccuracy <- confusion.matrix$overall[1] #Accuracy
+  
+    #List of all accuracies to plot the accuracy values against k values
+    k.accuracies <- c(k.accuracies, modelAccuracy)
+    
+    if(modelAccuracy > bestAccuracy){
+      bestAccuracy <- modelAccuracy
+      bestScale <- currentScale
+      bestk <- currentk
+      bestModel <- model.k
+    }
+  }
+
+  #Test different scales to find the best
+  for (currentScale in scalingMethod){
+    #Test different k from 1 to n to find the best
+    for (currentk in seq(1, n, 1)){
+      #Define scaling method for three types of scaling
+      preProcValues <- preProcess(trainSet.knn, method = currentScale)
+      
+      #Apply scaling
+      trainTransformed <- predict(preProcValues, trainSet.knn)
+      testTransformed <- predict(preProcValues, testSet.knn)
+      
+      #Create model with scaled data
+      model.k <- knn(trainTransformed, testTransformed, trainCl, currentk)
+      
+      #Evaluate accuracy of the model
+      # 3 is the positive value, when the meat is fresh
+      confusion.matrix <- confusionMatrix(model.k, testCl, positive="1")
+      modelAccuracy <- confusion.matrix$overall[1] #Accuracy
+      
+      #List of accuracies to plot the accuracy values against k values
+      k.accuracies <- c(k.accuracies, modelAccuracy)
+      
+      # If the previous models are outperformed, current accuracy is the new best accuracy
+      if(modelAccuracy > bestAccuracy){
+        bestAccuracy <- modelAccuracy
+        bestScale <- currentScale
+        bestk <- currentk
+        bestModel <- model.k
+      }
+    }
+  }
+  return(list(bestAccuracy = bestAccuracy,
+              bestScale = bestScale,
+              bestk = bestk,
+              bestModel = bestModel,
+              k.accuracies = k.accuracies))
 }
