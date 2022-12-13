@@ -170,60 +170,98 @@ ggplot(data = counts_temp_time, mapping = aes())+
 ggsave(filename = paste("Plots/3_BoxPlot.png"))
 ```
 # Classification
+## Classification method 1: knn
+### knn with HCLP
 Partition the dataset with 7:3 optimisation
-
+Partition the data once for HPLC.
 ```{r}
 #Use the function Partition to create a partition of data
-
-## Data from enose and sensory merged
-#Partition data
-part_enose_sens <- partition(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 1)
-
-## Data from hplc and sensory merged
-# Partition data
+#Partition data from HPLC and sensory merged
 part_HPLC_sens <- partition(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 1)
 ```
 
 ## Knn classification
 Perform classification for knn on HPLC data merged with sens.
+
 ```{r}
 #Optimisation of k without scaling
-optimal <- knn.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, 20, c())
+optimal1 <- knn.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, 20, c())
 
-optimal
+optimal1
 
-plot(x = c(1:20), y = optimal$k.accuracies, type='l', 
+#Plot accuracy against time for non scaled data
+plot(x = c(1:20), y = optimal1$k.accuracies, type='l', 
            main = "Accuracy by k without scale")
 
 #Optimisation of scale methods and k values
-optimal <- knn.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, 20, c("center", "scale", "range"))
+optimal2 <- knn.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, 20, c("center", "scale", "range"))
 
-optimal
-# Delete variable optimal
-rm(optimal)
+optimal2
 ```
+Display the cross table for tunned model (k=7)
+```{r}
+cross_table_knn(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, k = 7)
+```
+
+
+Partition HPLC for 100 iterations, for tunned model (k=7).
+```{r}
+HPLC_sens_run <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 100,
+          operation = function(trainSet, trainCl, testSet, testCl) {
+            trainSet.knn <- trainSet[,1:(ncol(trainSet)-1)]
+            testSet.knn <- testSet[,1:(ncol(testSet)-1)]
+            #Apply knn model with k=7
+            m <- knn(trainSet.knn, testSet.knn, trainCl, 7)
+            return(m)
+        })
+
+#Calculate cumulative mean
+cum_mean_HPLC_knn <- cumulative.mean.accuracy(HPLC_sens_run$accuracies)
+```
+
+###knn with enose
+Partition and optimise enose data
+Partition the data once for enose.
+```{r}
+#Use the function Partition to create a partition of data
+
+## Data from enose and sensory merged
+# Partition data
+part_enose_sens <- partition(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 1)
+```
+
+### Knn with enose
+Perform classification for knn on HPLC data merged with sens.
+```{r}
+# Partition data
+part_enose_sens <- partition(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 1)
+```
+
 
 ```{r}
-accur<-accuracy.cp(model.tree, testSet, testCl) 
-array.of.cp <- seq(from = 0.01, to = 0.1, by = 0.01)
+#Optimisation of k without scaling
+optimal1 <- knn.optimisation(part_enose_sens$trainSet, part_enose_sens$testSet, part_enose_sens$trainCl, part_enose_sens$testCl, 20, c())
 
-x11()
-plot(array.of.cp, accur, type='l')
+optimal1
+
+#Plot accuracy against time for non scaled data
+plot(x = c(1:20), y = optimal1$k.accuracies, type='l', 
+           main = "Accuracy by k without scale")
+
+#Optimisation of scale methods and k values
+optimal2 <- knn.optimisation(part_enose_sens$trainSet, part_enose_sens$testSet, part_enose_sens$trainCl, part_enose_sens$testCl, 20, c("center", "scale", "range"))
+
+optimal2
 ```
 
+## Classification method 2: RF
+### RF with data HPLC
 
-### Model training
-```{r}
+### RF with enose
 
-```
+## Classification method 3:svm - rd
+### svm-rd with HCLP
 
+### svm-rd with enose
 
-Perform classification for rf 
-
-Perform classification for svm-rd
-
-
-```{r}
-knn.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, 20)
-```
-
+## 1. 

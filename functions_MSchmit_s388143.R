@@ -80,16 +80,19 @@ partition <- function(AllData, predict, perc_predict, times){
   trainIndex <- createDataPartition(predict, p = perc_predict,
                                     list = FALSE,
                                     times = times)
-  trainSet <- AllData[trainIndex,]
-  print(ncol(trainSet))
-  testSet <- AllData[-trainIndex,]
-  #Two vectors containing test and train
-  trainCl <- as.factor(trainSet[, ncol(trainSet)])
-  testCl <- as.factor(testSet[, ncol(testSet)])
+
+  for (i in 1:times){
+    trainSet <- AllData[trainIndex[,i],]
+    testSet <- AllData[-trainIndex[,i],]
+    trainCl <- trainSet[,ncol(trainSet)]
+    testCl <- testSet[,ncol(testSet)]
+    trainSet <- trainSet[,1:(ncol(trainSet)-1)]
+    testSet <- testSet[,1:(ncol(testSet)-1)]
   return(list(trainSet = trainSet,
               testSet = testSet,
               trainCl = trainCl,
               testCl = testCl))
+  }
 }
 
 ############################# Classification #########################
@@ -103,12 +106,14 @@ knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMetho
   #Variable initialisation
   k.accuracies <- c()
   bestAccuracy <- 0
+  currentScale <- c()
+  currentk <- 0
 
   # Find best k without scaling
   # test of k values from 1 to 20
   
-  for (k in 1:n) {
-    model.k<-knn(trainSet, testSet, trainCl, k)
+  for (currentk in 1:n) {
+    model.k<-knn(trainSet.knn, testSet.knn, trainCl, currentk)
     confusion.matrix <- confusionMatrix(model.k, testCl, positive="1")
     modelAccuracy <- confusion.matrix$overall[1] #Accuracy
   
@@ -138,7 +143,7 @@ knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMetho
       model.k <- knn(trainTransformed, testTransformed, trainCl, currentk)
       
       #Evaluate accuracy of the model
-      # 3 is the positive value, when the meat is fresh
+      #1 is the positive value, when the meat is fresh
       confusion.matrix <- confusionMatrix(model.k, testCl, positive="1")
       modelAccuracy <- confusion.matrix$overall[1] #Accuracy
       
@@ -159,4 +164,64 @@ knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMetho
               bestk = bestk,
               bestModel = bestModel,
               k.accuracies = k.accuracies))
+}
+
+#knn model and cross table display
+cross_table_knn <- function(trainSet, testSet, trainCl, testCl, k){
+  #Remove the class variable of the train and test sets
+  trainSet.knn <- trainSet[, -ncol(trainSet)]
+  testSet.knn <- testSet[, -ncol(testSet)]
+  
+  #Create model with scaled data
+  model.k <- knn(trainSet.knn, testSet.knn, trainCl, k)
+  
+  #Cross table
+  cross.table <- CrossTable(testCl, model.k, prop.chisq=FALSE, prop.t=FALSE, prop.c=FALSE, prop.r=FALSE)
+  return(cross.table = corss.table, model.k = model.k)
+}
+
+
+#Create a partition with times iteration
+#For each iteration, run the model and store the accuracy
+model.run <- function(AllData, predict, perc_predict, times, operation){  
+  set.seed(8)
+  #Preserve correspondance between numerical and categorical data (predictor and response respectively)
+  trainIndex <- createDataPartition(predict, p = perc_predict,
+                                    list = FALSE,
+                                    times = times)
+  #List of accuracies init
+  accuracies <- c()
+  for (i in 1:times){
+    #Split data into train and test sets
+    trainSet <- AllData[trainIndex[,i],]
+    testSet <- AllData[-trainIndex[,i],]
+    trainCl <- trainSet[,ncol(trainSet)]
+    testCl <- testSet[,ncol(testSet)]
+    
+    #Train the model
+    model = operation(trainSet, trainCl, testSet, testCl)
+    
+    #Calculate cumulative natrix
+    confusion.matrix <- confusionMatrix(model, testCl, positive="1")
+    #Calculate model accuracy
+    modelAccuracy <- confusion.matrix$overall[1]
+    #Store accuracy in list
+    accuracies<-c(accuracies, modelAccuracy)
+  }
+  
+  return(list(trainSet = trainSet, 
+              testSet = testSet,
+              trainCl = trainCl,
+              testCl = testCl,
+              accuracies = accuracies,
+              model = model))
+}
+
+#Cumulative means accuracy calculation
+cumulative.mean.accuracy <- function(accuracies){
+  cumulative.means <- c()
+  for(i in 1:length(accuracies)) {
+    cumulative.means <- c(cumulative.means, mean(accuracies[1:i]))
+  }
+  return(cumulative.means)
 }
