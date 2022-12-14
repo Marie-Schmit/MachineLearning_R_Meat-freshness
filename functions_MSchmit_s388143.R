@@ -184,7 +184,7 @@ cross_table_knn <- function(trainSet, testSet, trainCl, testCl, k){
 
 #Create a partition with times iteration
 #For each iteration, run the model and store the accuracy
-#Calculate the corsstable and number of missclassified elements for each iteration
+#Calculate the crosstable and number of missclassified elements for each iteration
 model.run <- function(AllData, predict, perc_predict, times, operation){  
   set.seed(8)
   #Preserve correspondance between numerical and categorical data (predictor and response respectively)
@@ -482,4 +482,35 @@ misclassified_proportion_barplot <- function(list_misclassified, titleList){
     #Save plot
     ggsave(file= paste("Plots/MisclassifiedProportion_", titleList[i], ".png"))
   }
+}
+
+
+############# 3. Variables importance #########
+#Returns variables importance for random forest
+rf_var_importance <- function(AllData, predict, perc_predict, times,
+                              ntree, mtry, nodesize, maxnodes){
+  part <- partition_data(AllData, predict, perc_predict, times)
+  randomF <- randomForest(sensory~., data=part$trainSet, importance = TRUE, 
+                          ntree = ntree, mtry = mtry, nodesize = nodesize, maxnodes = 20L)
+  
+  Imp <- as.data.frame(varImp(randomF))
+  return(Imp)
+}
+
+#Make a plot showing variables importance for each class
+importance_plot <- function(importance, name){
+  Imp <- data.frame(feature = rownames(importance), importance)
+  #Reshape the data
+  Imp <- melt(Imp[,c("feature", "X1", "X2", "X3")], id.vars = 1)
+  
+  plot <- ggplot(data = Imp, aes(x = feature, y =  value))+
+    geom_bar(stat = "identity", width = 0.7, position = "dodge", aes(fill = variable))+
+    ggtitle(paste("Importance of each feature for each class", name))+
+    scale_fill_discrete(name = "Class",
+                        breaks = c("X1", "X2", "X3"),
+                        labels = c("1", "2", "3"))+
+    coord_flip()
+  #Save plot
+  ggsave(file= paste("Plots/Features_importance_", name, ".png"))
+  return(plot)
 }

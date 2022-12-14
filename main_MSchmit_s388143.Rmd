@@ -46,6 +46,7 @@ require("paradox")
 require("mlr3tuning")
 require("data.table")
 require("randomForest")
+require("reshape2")
 ```
 ```{r}
 #Install mlr3extralearners
@@ -363,11 +364,6 @@ cum_mean_enose_svm <- cumulative.mean.accuracy(enose_sens_run_svm$accuracies)
 cum_mean_enose_svm
 ```
 
-
-```{r, include = FALSE}
-```
-
-
 ## Classification method 3: Random Forest
 ### RF with data HPLC
 
@@ -512,5 +508,46 @@ list_proportions <- c("HPLC_knn", "HPLC_svm", "HPLC_rf",
 #Create and save barplots for every dataset and method
 misclassified_proportion_barplot(list_methods, list_proportions)
 
+```
+
+##3. Importance of each variable for the prediction for one iteration
+```{r}
+#Return table of variables importance for HPLC
+rf_var_importance_HPLC <- rf_var_importance(AllData_HPLC_sens, AllData_HPLC_sens$sensory,0.7, 1,
+                             ntree = 200L, mtry = 2L, nodesize = 2L, maxnodes = 20L)
+#Importance plot
+importance_plot(rf_var_importance_HPLC, "HPLC, rf")
+
+#Variables importance for enose
+rf_var_importance_enose <- rf_var_importance(AllData_enose_sens, AllData_enose_sens$sensory,0.7, 1,
+                             ntree = 200L, mtry = 2L, nodesize = 2L, maxnodes = 20L)
+#Importance plot
+importance_plot(rf_var_importance_enose, "enose, rf")
+
+
+```
+
+
+```{r}
+model_svm <- svm(sensory ~ ., data=HPLC_part$trainSet)
+kernel.predicted <- predict(model_svm, HPLC_part$testSet, type="response")
+Imp <- varImp(model_svm)       
+
+ggplot(data = Imp)+
+    geom_bar(data = Imp, aes(x = colnames(Imp), y =  Imp[1]))
+
+require(rminer)
+require(generics)
+model <- fit(sensory~., data = HPLC_part$trainSet, model = "svm", kpar = list(sigma=0.1), C=1)
+
+  #Create barplot of variable importance
+  ggplot(data = Imp)+
+    geom_bar(data = Imp, aes(x = colnames(Imp), y =  Imp[1]))+
+    coord_flip()+
+    xlab("Classe")+
+    ylab("Sum of proportions of misclassification for 10 iteration")+
+    ggtitle(paste("Sum of proportions of misclassifications, ", titleList[i]))
+  #Save plot
+  ggsave(file= paste("Plots/MisclassifiedProportion_", titleList[i], ".png"))
 ```
 
