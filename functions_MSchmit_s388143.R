@@ -184,6 +184,7 @@ cross_table_knn <- function(trainSet, testSet, trainCl, testCl, k){
 
 #Create a partition with times iteration
 #For each iteration, run the model and store the accuracy
+#Calculate the corsstable and number of missclassified elements for each iteration
 model.run <- function(AllData, predict, perc_predict, times, operation){  
   set.seed(8)
   #Preserve correspondance between numerical and categorical data (predictor and response respectively)
@@ -192,10 +193,10 @@ model.run <- function(AllData, predict, perc_predict, times, operation){
                                     times = times)
   #List of accuracies init
   accuracies <- c()
-  
-  #Initialisation of vectors containing number and proportions of misclassified elements
-  misclassification_prop <- c()
-  misclassification_nb <- c()
+
+  #Initialise vevctors sums of number and proportion of misclassifications
+  mis_nb_sum <- c(0,0,0)
+  mis_prop_sum <- c(0,0,0)
   
   #For each partition
   for (i in 1:times){
@@ -218,9 +219,9 @@ model.run <- function(AllData, predict, perc_predict, times, operation){
     #Calculate cross table
     cross.table <- CrossTable(testCl, model, prop.chisq=FALSE, prop.t=FALSE, prop.c=FALSE, prop.r=FALSE)
     #Calculate missclassifications
-    misclas <- missclassification(cross.table)
-    misclassification_prop <- append(misclassification_prop, misclas$mis_prop_sum)
-    misclassification_nb <- append(misclassification_nb, misclas$mis_nb_sum)
+    misclas <- misclassification(cross.table, mis_nb_sum, mis_prop_sum)
+    mis_nb_sum <- misclas$mis_nb_sum
+    mis_prop_sum <- misclas$mis_prop_sum
   }
   
   return(list(trainSet = trainSet, 
@@ -229,8 +230,7 @@ model.run <- function(AllData, predict, perc_predict, times, operation){
               testCl = testCl,
               accuracies = accuracies,
               model = model,
-              misclassification_nb = misclassification_nb,
-              misclassification_prop = misclassification_prop))
+              misclas = misclas))
 }
 
 #Cumulative means accuracy calculation
@@ -410,22 +410,18 @@ cumulative_plot <-  function(cum_mean_knn, cum_mean_rf, cum_mean_svm, dataset){
 
 ####### Question2 #########
 ## Calculate number and proportion of misclassifications (FP and FN) in crosstable
-missclassification <- function(CrossTable){
+misclassification <- function(CrossTable, mis_nb_sum, mis_prop_sum){
   nb_crossTable <- CrossTable$t
   prop_crossTable <- CrossTable$prop.tbl
   
-  #Initialise sums of number and proportion of misclassifications
-  mis_nb_sum <- 0
-  mis_prop_sum <- 0
-  
-  for (i in 1:nrow(nb_crossTable)){
-    #If j and i are equel, the classification is right (predicted = actual)
+  for (i in 1:nrow(nb_crossTable)){ #i is the value of the actual class
+    #If j and i are equal, the classification is right (predicted = actual)
     for (j in 1:ncol(nb_crossTable)){
       if (i!=j){
-        #Sum of number of misclassifications
-        mis_nb_sum = nb_crossTable[i,j] + mis_nb_sum
-        #Sum of proportions of misclassifications
-        mis_prop_sum = prop_crossTable[i,j] + mis_prop_sum
+        #Sum of number of misclassifications for atucal class i, stored in vector mis_nb_sum
+        mis_nb_sum[i] = mis_nb_sum[i]+nb_crossTable[i,j]
+        #Sum of proportions of misclassifications for class i
+        mis_prop_sum[i] = mis_prop_sum[i]+prop_crossTable[i,j]
       }
     }
   }

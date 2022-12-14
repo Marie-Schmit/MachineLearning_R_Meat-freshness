@@ -472,43 +472,6 @@ cumulative_plot(cum_mean_HPLC_knn, cum_mean_HPLC_rf, cum_mean_HPLC_svm, "HPLC")
 ## 2. Number and proportion of misclassified samples
 
 ```{r}
-optimal_svm_hplc$bestCrossTable
-nb_crossTable <- optimal_svm_hplc$bestCrossTable$t
-prop_crossTable <- optimal_svm_hplc$bestCrossTable$prop.tbl
-
-
-#Vector of number of misclassification
-misclassification_nb <- c()
-mis_nb_sum <- 0
-#Vector of proportion of missclassification
-
-mis_prop_sum <- 0
-
-for (i in 1:nrow(nb_crossTable)){
-  #If j and i are equel, the classification is right (predicted = actual)
-  for (j in 1:ncol(nb_crossTable)){
-    if (i!=j){
-      #Sum of number of misclassifications
-      mis_nb_sum = nb_crossTable[i,j] + mis_nb_sum
-      #Sum of proportions of misclassifications
-      mis_prop_sum = prop_crossTable[i,j] + mis_prop_sum
-    }
-  }
-  misclassification_nb <- mis_nb_sum
-  misclassification_prop <- mis_prop_sum
-}
-```
-```{r}
-HPLC_sens_run_knn <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 100,
-          operation = function(trainSet, trainCl, testSet, testCl) {
-            trainSet.knn <- trainSet[,1:(ncol(trainSet)-1)]
-            testSet.knn <- testSet[,1:(ncol(testSet)-1)]
-            #Apply knn model with k=7
-            m <- knn(trainSet.knn, testSet.knn, trainCl, 7)
-            return(m)
-        })
-
-HPLC_sens_run_knn$misclassification_nb
-HPLC_sens_run_knn$misclassification_prop
+HPLC_sens_run_knn$misclas
 ```
 
