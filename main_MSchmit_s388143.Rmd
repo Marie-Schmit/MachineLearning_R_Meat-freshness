@@ -497,15 +497,20 @@ cumulative_plot(cum_mean_HPLC_knn, cum_mean_HPLC_rf, cum_mean_HPLC_svm, "HPLC")
 ## 2. Number and proportion of misclassified samples
 
 ```{r}
-HPLC_sens_run_knn$misclas
-HPLC_sens_run_svm$misclas
+#Barplot of misclassification proportion per class
 
-enose_sens_run_knn$misclas
-enose_sens_run_svm$misclas
+list_methods <- list(HPLC_sens_run_knn$misclas$mis_prop_sum, 
+                  HPLC_sens_run_svm$misclas$mis_prop_sum, 
+                  rf_accuracies_HPLC$misclas$mis_prop_sum,
+                  enose_sens_run_knn$misclas$mis_prop_sum, 
+                  enose_sens_run_svm$misclas$mis_prop_sum, 
+                  rf_accuracies_enose$misclas$mis_prop_sum
+                  )
+list_proportions <- c("HPLC_knn", "HPLC_svm", "HPLC_rf",
+                      "enose_knn", "enose_svm", "enose_rf")
 
-rf_accuracies_HPLC$misclas
-rf_accuracies_enose$misclas
+#Create and save barplots for every dataset and method
+misclassified_proportion_barplot(list_methods, list_proportions)
 
-rf_accuracies_HPLC$misclas
 ```
 

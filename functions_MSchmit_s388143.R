@@ -466,3 +466,20 @@ misclassification_confMatrix <- function(confMatrix, mis_nb_sum, mis_prop_sum){
   return(list(mis_nb_sum = mis_nb_sum,
               mis_prop_sum = mis_prop_sum))
 }
+
+#Create barplot of misclassified proportions
+misclassified_proportion_barplot <- function(list_misclassified, titleList){
+  i <- 0
+  for (proportion in list_misclassified){
+    i = i+1
+    #Create a dataframe with classes and proportions
+    data = data.frame(sum_proportion = proportion, classe = c(1:3))
+    ggplot(data = data, aes(x = data$classe, y = data$sum_proportion))+
+      geom_bar(stat = "identity")+
+      xlab("Classe")+
+      ylab("Sum of proportions of misclassification for 10 iteration")+
+      ggtitle(paste("Sum of proportions of misclassifications, ", titleList[i]))
+    #Save plot
+    ggsave(file= paste("Plots/MisclassifiedProportion_", titleList[i], ".png"))
+  }
+}
