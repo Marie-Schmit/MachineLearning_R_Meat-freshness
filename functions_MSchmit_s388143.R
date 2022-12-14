@@ -192,6 +192,12 @@ model.run <- function(AllData, predict, perc_predict, times, operation){
                                     times = times)
   #List of accuracies init
   accuracies <- c()
+  
+  #Initialisation of vectors containing number and proportions of misclassified elements
+  misclassification_prop <- c()
+  misclassification_nb <- c()
+  
+  #For each partition
   for (i in 1:times){
     #Split data into train and test sets
     trainSet <- AllData[trainIndex[,i],]
@@ -208,6 +214,13 @@ model.run <- function(AllData, predict, perc_predict, times, operation){
     modelAccuracy <- confusion.matrix$overall[1]
     #Store accuracy in list
     accuracies<-c(accuracies, modelAccuracy)
+    
+    #Calculate cross table
+    cross.table <- CrossTable(testCl, model, prop.chisq=FALSE, prop.t=FALSE, prop.c=FALSE, prop.r=FALSE)
+    #Calculate missclassifications
+    misclas <- missclassification(cross.table)
+    misclassification_prop <- append(misclassification_prop, misclas$mis_prop_sum)
+    misclassification_nb <- append(misclassification_nb, misclas$mis_nb_sum)
   }
   
   return(list(trainSet = trainSet, 
@@ -215,7 +228,9 @@ model.run <- function(AllData, predict, perc_predict, times, operation){
               trainCl = trainCl,
               testCl = testCl,
               accuracies = accuracies,
-              model = model))
+              model = model,
+              misclassification_nb = misclassification_nb,
+              misclassification_prop = misclassification_prop))
 }
 
 #Cumulative means accuracy calculation
@@ -391,4 +406,29 @@ cumulative_plot <-  function(cum_mean_knn, cum_mean_rf, cum_mean_svm, dataset){
     ggtitle(paste("Cumulative mean accuracies for", dataset, "data"))
   #Save plot
   ggsave(file= paste("Plots/Cumulative_means_", dataset, ".png"))
+}
+
+####### Question2 #########
+## Calculate number and proportion of misclassifications (FP and FN) in crosstable
+missclassification <- function(CrossTable){
+  nb_crossTable <- CrossTable$t
+  prop_crossTable <- CrossTable$prop.tbl
+  
+  #Initialise sums of number and proportion of misclassifications
+  mis_nb_sum <- 0
+  mis_prop_sum <- 0
+  
+  for (i in 1:nrow(nb_crossTable)){
+    #If j and i are equel, the classification is right (predicted = actual)
+    for (j in 1:ncol(nb_crossTable)){
+      if (i!=j){
+        #Sum of number of misclassifications
+        mis_nb_sum = nb_crossTable[i,j] + mis_nb_sum
+        #Sum of proportions of misclassifications
+        mis_prop_sum = prop_crossTable[i,j] + mis_prop_sum
+      }
+    }
+  }
+  return(list(mis_nb_sum = mis_nb_sum,
+              mis_prop_sum = mis_prop_sum))
 }
