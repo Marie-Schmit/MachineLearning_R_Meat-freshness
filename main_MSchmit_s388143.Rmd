@@ -33,8 +33,24 @@ require("ggplot2")
 require("RColorBrewer")
 require("graphics")
 require("caret")
+require("mlr3")
 library("pheatmap")
+require("tidyverse")
+require("mlbench")
+require("mlr3viz")
+require("mlr3learners")
+require("randomForest")
+require("mlr3extralearners")
+require("devtools")
+require("paradox")
+require("mlr3tuning")
+require("data.table")
 ```
+```{r}
+#Install mlr3extralearners
+devtools::install_local("C:/Programs/R-4.2.2/library/mlr3extralearners-0.5.49")
+```
+
 
 
 Functions are saved in a dedicated script.
@@ -177,7 +193,7 @@ Partition the data once for HPLC.
 ```{r}
 #Use the function Partition to create a partition of data
 #Partition data from HPLC and sensory merged
-part_HPLC_sens <- partition(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 1)
+part_HPLC_sens <- partition_data(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 1)
 ```
 
 ## Knn classification
@@ -202,11 +218,9 @@ Display the cross table for tunned model (k=7)
 ```{r}
 cross_table_knn(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, k = 7)
 ```
-
-
 Partition HPLC for 100 iterations, for tunned model (k=7).
 ```{r}
-HPLC_sens_run <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 100,
+HPLC_sens_run_knn <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 100,
           operation = function(trainSet, trainCl, testSet, testCl) {
             trainSet.knn <- trainSet[,1:(ncol(trainSet)-1)]
             testSet.knn <- testSet[,1:(ncol(testSet)-1)]
@@ -216,52 +230,235 @@ HPLC_sens_run <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 10
         })
 
 #Calculate cumulative mean
-cum_mean_HPLC_knn <- cumulative.mean.accuracy(HPLC_sens_run$accuracies)
-```
-
-###knn with enose
-Partition and optimise enose data
-Partition the data once for enose.
-```{r}
-#Use the function Partition to create a partition of data
-
-## Data from enose and sensory merged
-# Partition data
-part_enose_sens <- partition(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 1)
+cum_mean_HPLC_knn <- cumulative.mean.accuracy(HPLC_sens_run_knn$accuracies)
+cum_mean_HPLC_knn
 ```
 
 ### Knn with enose
 Perform classification for knn on HPLC data merged with sens.
+Partition data
 ```{r}
 # Partition data
-part_enose_sens <- partition(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 1)
+part_enose_sens <- partition_data(AllData_enose_sens, AllData_enose_sens$sensory, .7, 1)
 ```
 
-
+Model tunning
 ```{r}
 #Optimisation of k without scaling
 optimal1 <- knn.optimisation(part_enose_sens$trainSet, part_enose_sens$testSet, part_enose_sens$trainCl, part_enose_sens$testCl, 20, c())
 
-optimal1
+optimal1$bestAccuracy
+optimal1$bestk
 
 #Plot accuracy against time for non scaled data
 plot(x = c(1:20), y = optimal1$k.accuracies, type='l', 
-           main = "Accuracy by k without scale")
+           main = "Accuracy by k without scale",
+     xlab = "k",
+     ylab = "Accuracy")
 
 #Optimisation of scale methods and k values
 optimal2 <- knn.optimisation(part_enose_sens$trainSet, part_enose_sens$testSet, part_enose_sens$trainCl, part_enose_sens$testCl, 20, c("center", "scale", "range"))
 
-optimal2
+optimal2$bestAccuracy
+optimal2$bestk
+optimal2$bestScale
+
+```
+Partition enose for 100 iterations, for tunned model (k=3).
+```{r}
+enose_sens_run_knn <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 100,
+          operation = function(trainSet, trainCl, testSet, testCl) {
+            trainSet.knn <- trainSet[,1:(ncol(trainSet)-1)]
+            testSet.knn <- testSet[,1:(ncol(testSet)-1)]
+            #Apply knn model with k=7
+            m <- knn(trainSet.knn, testSet.knn, trainCl, 7)
+            return(m)
+        })
+
+#Calculate cumulative mean
+cum_mean_enose_knn <- cumulative.mean.accuracy(enose_sens_run_knn$accuracies)
+cum_mean_enose_knn
 ```
 
-## Classification method 2: RF
-### RF with data HPLC
-
-### RF with enose
-
-## Classification method 3:svm - rd
+## Classification method 2:svm - rd
 ### svm-rd with HCLP
+```{r}
+#List of kernels to test for calssification
+kerList <- as.array(c('vanilladot', 'polydot', 'rbfdot', 'tanhdot'))
+
+#Optimisation of the model: test of kernels from the list
+optimal_svm_hplc <- svm.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, kerList)
+
+optimal_svm_hplc$bestAccuracy
+optimal_svm_hplc$bestKernel
+```
+
+```{r}
+#Run the optimised model for 100 iterations, save the resulting accuracies list
+HPLC_sens_svm <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 100,
+          operation = function(trainSet, trainCl, testSet, testCl, kernel_type) {
+            #Apply svm with kernel = rbfdot and 
+            model_svm <- ksvm(sensory ~ ., data=trainSet,
+                                   kernel = "rbfdot", C=1)
+            kernel.predicted <- predict(model_svm, testSet, type="response")
+            return(kernel.predicted)
+        })
+
+#Calculate cumulative mean
+cum_mean_HPLC_svm <- cumulative.mean.accuracy(HPLC_sens_svm$accuracies)
+cum_mean_HPLC_svm
+```
 
 ### svm-rd with enose
+```{r}
+#List of kernels to test for classification
+kerList <- as.array(c('vanilladot', 'polydot', 'rbfdot', 'tanhdot'))
 
-## 1. 
+#Optimisation of the model: test of kernels from the list
+optimal_svm_enose <- svm.optimisation(part_enose_sens$trainSet, part_enose_sens$testSet, part_enose_sens$trainCl, part_enose_sens$testCl, kerList)
+
+optimal_svm_enose$bestAccuracy
+optimal_svm_enose$bestKernel
+```
+
+```{r}
+#Run the optimised model for 100 iterations, save the resulting accuracies list
+enose_sens_svm <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 100,
+          operation = function(trainSet, trainCl, testSet, testCl, kernel_type) {
+            #Apply svm with kernel = rbfdot and 
+            model_svm <- ksvm(sensory ~ ., data=trainSet,
+                                   kernel = "rbfdot", C=1)
+            kernel.predicted <- predict(model_svm, testSet, type="response")
+            return(kernel.predicted)
+        })
+
+#Calculate cumulative mean
+cum_mean_enose_svm <- cumulative.mean.accuracy(enose_sens_svm$accuracies)
+cum_mean_enose_svm
+```
+
+
+## Classification method 3: Random Forest
+### RF with data HPLC
+
+Model building: create model task
+```{r}
+#Create a learner
+rf_class_learner_HPLC <- rf_class_learner(AllData_HPLC_sens)
+rf_class_learner_HPLC$rf_task
+#Check the number of elements for each sensory
+rf_class_learner_HPLC$plt
+```
+Model tunning
+```{r}
+#List of hypoparameters
+rf_class_learner_HPLC$learner$param_set$ids()
+```
+
+```{r}
+#Pefrom tuning for hplc
+rf_tuning_HPLC <- rf_tuning(ntree_min = 200, ntree_max = 500, 
+                            mtry_min = 2, mtry_max = 19,
+                            nodesize_min = 1, nodesize_max = 5, 
+                            maxnodes_min = 2, maxnodes_max = 20, 
+                            nb_evaluation = 20, part_ratio = .7, 
+                            task_rf = rf_class_learner_HPLC$rf_task, AllData = AllData_HPLC_sens
+                      )
+```
+Best hyperparameters
+```{r}
+rf_tuning_HPLC$instance$result_learner_param_vals
+```
+
+Build final model with the tunned parameters
+```{r}
+learner_tun_HPLC <- built_model(learner_tun = rf_tuning_HPLC$learner_tun, instance = rf_tuning_HPLC$instance, task_train = rf_tuning_HPLC$task_train)
+
+learner_tun_HPLC$model
+```
+
+Test final model
+```{r}
+test_HPLC_perf <- rf_test(rf_class_learner_HPLC$rf_task, learner_tun_HPLC, part_ratio = .7, split = rf_tuning_HPLC$split, title = "HPLC")
+#Print accuracy
+test_HPLC_perf$accuracy
+#Print confusion matrix
+test_HPLC_perf$conf_matr
+#Plot performances
+test_HPLC_perf$plt
+```
+
+```{r}
+#With 100 iterations, train and test the tunned model
+rf_accuracies_HPLC <- run_rf(rf_class_learner_HPLC$rf_task, times = 100, learner = learner_tun_HPLC, ratio = .7)
+#Calculate cumulative means accuracies
+cum_mean_HPLC_rf <- cumulative.mean.accuracy(rf_accuracies_HPLC)
+cum_mean_HPLC_rf
+```
+
+
+### RF with enose
+Model building: create model task
+```{r}
+#Create a learner
+rf_class_learner_enose <- rf_class_learner(AllData_enose_sens)
+rf_class_learner_enose$rf_task
+#Check the number of elements for each sensory
+rf_class_learner_enose$plt
+```
+Model tunning
+```{r}
+#List of hypoparameters
+rf_class_learner_enose$learner$param_set$ids()
+```
+
+```{r}
+#Pefrom tuning for enose
+rf_tuning_enose <- rf_tuning(ntree_min = 200, ntree_max = 500, 
+                            mtry_min = 2, mtry_max = 8,
+                            nodesize_min = 1, nodesize_max = 5, 
+                            maxnodes_min = 2, maxnodes_max = 20, 
+                            nb_evaluation = 20, part_ratio = .7, 
+                            task_rf = rf_class_learner_enose$rf_task, AllData = AllData_enose_sens
+                      )
+```
+Best hyperparameters
+```{r}
+rf_tuning_enose$instance$result_learner_param_vals
+```
+
+Build final model with the tunned parameters
+```{r}
+learner_tun_enose <- built_model(learner_tun = rf_tuning_enose$learner_tun, instance = rf_tuning_enose$instance, task_train = rf_tuning_enose$task_train)
+
+learner_tun_enose$model
+```
+
+Test final model
+```{r}
+test_enose_perf <- rf_test(rf_class_learner_enose$rf_task, learner_tun_enose, part_ratio = .7, split = rf_tuning_enose$split, title = "enose")
+#Print accuracy
+test_enose_perf$accuracy
+#Print confusion matrix
+test_enose_perf$conf_matr
+#Plot performances
+test_enose_perf$plt
+```
+
+```{r}
+#With 100 iterations, train and test the tunned model
+rf_accuracies_enose <- run_rf(rf_class_learner_enose$rf_task, times = 100, learner = learner_tun_enose, ratio = .7)
+#Calculate cumulative means accuracies
+cum_mean_enose_rf <- cumulative.mean.accuracy(rf_accuracies_enose)
+cum_mean_enose_rf
+```
+
+## 1. Bar plot of all cumulative mean accuracy, for 100 iterations
+
+```{r}
+#Create and save cumulative means plot for enose
+cumulative_plot(cum_mean_enose_knn, cum_mean_enose_rf, cum_mean_enose_svm, "enose")
+#Create and save cumulative means plot for HPLC
+cumulative_plot(cum_mean_HPLC_knn, cum_mean_HPLC_rf, cum_mean_HPLC_svm, "HPLC")
+```
+

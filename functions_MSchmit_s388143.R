@@ -74,7 +74,7 @@ temp_time <- function(AllData){
 # Function to partition dataset into train and test values
 ## Return a list of two vectors (train and test)
 ## perc_predict is the percentage of train data
-partition <- function(AllData, predict, perc_predict, times){  
+partition_data <- function(AllData, predict, perc_predict, times){  
   set.seed(8)
   #Preserve correspondance between numerical and categorical data (predictor and response respectively)
   trainIndex <- createDataPartition(predict, p = perc_predict,
@@ -86,8 +86,6 @@ partition <- function(AllData, predict, perc_predict, times){
     testSet <- AllData[-trainIndex[,i],]
     trainCl <- trainSet[,ncol(trainSet)]
     testCl <- testSet[,ncol(testSet)]
-    trainSet <- trainSet[,1:(ncol(trainSet)-1)]
-    testSet <- testSet[,1:(ncol(testSet)-1)]
   return(list(trainSet = trainSet,
               testSet = testSet,
               trainCl = trainCl,
@@ -108,6 +106,7 @@ knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMetho
   bestAccuracy <- 0
   currentScale <- c()
   currentk <- 0
+  bestk <- 0
 
   # Find best k without scaling
   # test of k values from 1 to 20
@@ -124,6 +123,8 @@ knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMetho
       bestAccuracy <- modelAccuracy
       bestScale <- currentScale
       bestk <- currentk
+      print(bestk)
+      print(bestAccuracy)
       bestModel <- model.k
     }
   }
@@ -177,7 +178,7 @@ cross_table_knn <- function(trainSet, testSet, trainCl, testCl, k){
   
   #Cross table
   cross.table <- CrossTable(testCl, model.k, prop.chisq=FALSE, prop.t=FALSE, prop.c=FALSE, prop.r=FALSE)
-  return(cross.table = corss.table, model.k = model.k)
+  return(list(cross.table = cross.table, model.k = model.k))
 }
 
 
@@ -224,4 +225,170 @@ cumulative.mean.accuracy <- function(accuracies){
     cumulative.means <- c(cumulative.means, mean(accuracies[1:i]))
   }
   return(cumulative.means)
+}
+
+
+############ SVM - rd #########
+#Tuning of SVM to find the best kernels
+svm.optimisation <- function(trainSet, testSet, trainCl, testCl, kernel){
+  #Variable initialisation
+  bestAccuracy <- 0
+  currentAccuracy <- 0
+  bestKernel <- c()
+  bestModel <- c()
+  bestConfusionMatrix <- c()
+  bestCrossTable <- c()
+  bestPrediction <- c()
+    
+  for (kernel_type in kernel){
+    model_svm <- ksvm(sensory ~ ., data=trainSet, kernel=kernel_type, C=1)
+    kernel.predicted <- predict(model_svm, testSet, type="response")
+    
+    #Accuracy calculation
+    kernel.confusion.matrix <- confusionMatrix(kernel.predicted, testCl, positive="1")
+    modelAccuracy <- kernel.confusion.matrix$overall[1]
+    
+    #If current accuracy is the best, update best accuracy
+    if(modelAccuracy > bestAccuracy){
+      bestAccuracy <- modelAccuracy
+      bestKernel <- kernel_type
+      bestModel <- model_svm
+      bestPrediction <- kernel.predicted
+      bestConfusionMatrix <- kernel.confusion.matrix
+      
+      #Calculate cross table
+      bestCrossTable <- CrossTable(testCl, kernel.predicted, 
+                                prop.chisq=FALSE, prop.t=FALSE, prop.c=FALSE, 
+                                prop.r=FALSE)
+    }
+  }
+  return(list(bestAccuracy = bestAccuracy,
+    bestKernel = bestKernel,
+    bestModel = bestModel,
+    bestPrediction = bestPrediction,
+    bestCrossTable = bestCrossTable,
+    bestConfusionMatrix = bestConfusionMatrix))
+}
+
+
+########### Random forest ########
+#Define a class and a learner
+rf_class_learner <- function(AllData){
+  #Define a task
+  rf_task = as_task_classif(sensory~., data=AllData)
+  rf_task$data()
+  main <- deparse(substitute(AllData)) #Name the plot acording to AllData
+  #Save the frequency plot
+  png(file= paste("Plots/RandomForest_", main, ".png"))
+  #Inspect the frequency of each class 
+  plt <- autoplot(rf_task)
+  graphics.off()
+  #Set the learner for classify random forest
+  learner = lrn("classif.randomForest")
+  return(list(rf_task = rf_task, learner = learner, plt = plt))
+}
+
+
+#Model tuning
+rf_tuning <- function(ntree_min, ntree_max, mtry_min, mtry_max,nodesize_min, nodesize_max, 
+                      maxnodes_min, maxnodes_max, nb_evaluation,
+                      part_ratio, task_rf, AllData
+                      ){
+  learner_tun = lrn("classif.randomForest",
+                    ntree = to_tune(ntree_min, ntree_max),
+                    mtry = to_tune(mtry_min, mtry_max),
+                    nodesize = to_tune(nodesize_min, nodesize_max),
+                    maxnodes = to_tune(maxnodes_min, maxnodes_max)
+  )
+  #Resampling method
+  resampling = rsmp("cv", folds = 3)
+  #Performance measure
+  measure = msr("classif.acc")
+  
+  #Budget allocation for tuning
+  terminator = trm("evals", n_evals = nb_evaluation)
+  #Partition data
+  set.seed(8)
+  split = partition(task_rf, ratio = part_ratio)
+  #Define new train task
+  train_Set <- AllData[split$train,]
+  task_train <- as_task_classif(sensory~., data = train_Set)
+  #Construct tunning instance single criterion 
+  #(store objective function that estimate eprformance of hyperparameters)
+  instance = ti(task = task_train,
+                learner = learner_tun,
+                resampling = resampling,
+                measures = measure,
+                terminator = terminator
+           )
+  print(instance)
+  #Perform tuning with grid search
+  tuner = tnr("grid_search", resolution = 5, batch_size = 4)
+  #Initiate tuning process
+  tuner$optimize(instance)
+  return(list(instance = instance,
+         learner_tun = learner_tun, split = split,
+         task_train = task_train))
+  
+}
+
+#Build final mode
+built_model <- function(learner_tun, instance, task_train){
+  learner_tun$param_set$values = instance$result_learner_param_vals
+  learner_tun$train(task_train)
+  learner_tun$model
+  return(learner_tun = learner_tun)
+}
+
+#Test model performances
+rf_test <- function(task_rf, learner, part_ratio, split, title){
+  prediction = learner$predict(task_rf, split$test)
+  #Classification accuracy
+  measure = msr("classif.acc")
+  accuracy <- prediction$score(measure)
+  #Confusion matrix
+  conf_matr <- prediction$confusion
+  #Inspect the frequency of each class 
+  plt <- autoplot(prediction)+
+    ggtitle(paste("Frequency plot random forest", title))
+  #Save frequency plot
+  ggsave(file= paste("Plots/Test_RandomForest_", title, ".png"))
+  return(list(accuracy = accuracy, conf_matr = conf_matr, plt = plt))
+}
+
+#Train and test random forest
+run_rf <- function(task, times, learner, ratio){
+  accuracies <- c()
+  #List of accuracies init
+  accuracies <- c()
+  set.seed(8)
+  #For each iteration
+  for (i in 1:times){
+    split = partition(task, ratio = ratio)
+    #Model training
+    learner$train(task, split$train)
+    prediction = learner$predict(task, split$test)
+    #Classification accuracy
+    measure = msr("classif.acc")
+    accuracy <- prediction$score(measure)
+    accuracies <- append(accuracies, accuracy)
+  }
+  return(accuracies = accuracies)
+}
+
+######## Question1 #########
+#Plots of cumulative accuracy means for each dataset and classification method
+cumulative_plot <-  function(cum_mean_knn, cum_mean_rf, cum_mean_svm, dataset){
+  #Data frame containing all cumulative means
+  accuracy_cumulative_means <- data.frame(cum_mean_knn,
+                                          cum_mean_rf,
+                                          cum_mean_svm)
+  accuracy_cumulative_means$id = 1:nrow(accuracy_cumulative_means)
+  df_cum_means <- melt(accuracy_cumulative_means, id = "id")
+  names(df_cum_means) <- c("id", "func", "value")
+  
+  ggplot() + geom_line(data = df_cum_means, aes(x = id, y = value, color = func, group = func), size = 1)+
+    ggtitle(paste("Cumulative mean accuracies for", dataset, "data"))
+  #Save plot
+  ggsave(file= paste("Plots/Cumulative_means_", dataset, ".png"))
 }
