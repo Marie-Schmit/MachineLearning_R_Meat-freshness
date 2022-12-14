@@ -371,25 +371,40 @@ rf_test <- function(task_rf, learner, part_ratio, split, title){
   return(list(accuracy = accuracy, conf_matr = conf_matr, plt = plt))
 }
 
+
 #Train and test random forest
 run_rf <- function(task, times, learner, ratio){
   accuracies <- c()
   #List of accuracies init
   accuracies <- c()
+  #Initialise vectors sums of number and proportions of misclassification
+  mis_nb_sum <- c(0,0,0)
+  mis_prop_sum <- c(0,0,0)
+  
   set.seed(8)
   #For each iteration
   for (i in 1:times){
     split = partition(task, ratio = ratio)
+    
     #Model training
     learner$train(task, split$train)
     prediction = learner$predict(task, split$test)
+    
     #Classification accuracy
     measure = msr("classif.acc")
     accuracy <- prediction$score(measure)
     accuracies <- append(accuracies, accuracy)
+    
+    #Calculate confusion matrix
+    conf_matr <- prediction$confusion
+    #Calculate missclassifications
+    misclas <- misclassification_confMatrix(conf_matr, mis_nb_sum, mis_prop_sum)
+    mis_nb_sum <- misclas$mis_nb_sum
+    mis_prop_sum <- misclas$mis_prop_sum
   }
-  return(accuracies = accuracies)
+  return(list(accuracies = accuracies, misclas = misclas))
 }
+
 
 ######## Question1 #########
 #Plots of cumulative accuracy means for each dataset and classification method
@@ -408,6 +423,7 @@ cumulative_plot <-  function(cum_mean_knn, cum_mean_rf, cum_mean_svm, dataset){
   ggsave(file= paste("Plots/Cumulative_means_", dataset, ".png"))
 }
 
+
 ####### Question2 #########
 ## Calculate number and proportion of misclassifications (FP and FN) in crosstable
 misclassification <- function(CrossTable, mis_nb_sum, mis_prop_sum){
@@ -425,6 +441,28 @@ misclassification <- function(CrossTable, mis_nb_sum, mis_prop_sum){
       }
     }
   }
+  return(list(mis_nb_sum = mis_nb_sum,
+              mis_prop_sum = mis_prop_sum))
+}
+
+#Calculate misclassifications with a confusion matrix
+misclassification_confMatrix <- function(confMatrix, mis_nb_sum, mis_prop_sum){
+  nb_crossTable <- confMatrix
+  total = 0
+  
+  for (i in 1:nrow(nb_crossTable)){ #i is the value of the actual class
+    #If j and i are equal, the classification is right (predicted = actual)
+    for (j in 1:ncol(nb_crossTable)){
+      #Count number of elements
+      total = nb_crossTable[i,j] + total
+      if (i!=j){
+        #Sum of number of misclassifications for atucal class i, stored in vector mis_nb_sum
+        mis_nb_sum[i] = mis_nb_sum[i]+nb_crossTable[i,j]
+      }
+    }
+  }
+  #Sum of proportions of misclassifications for class i
+  mis_prop_sum = mis_nb_sum / total
   return(list(mis_nb_sum = mis_nb_sum,
               mis_prop_sum = mis_prop_sum))
 }

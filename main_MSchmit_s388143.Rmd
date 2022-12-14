@@ -45,6 +45,7 @@ require("devtools")
 require("paradox")
 require("mlr3tuning")
 require("data.table")
+require("randomForest")
 ```
 ```{r}
 #Install mlr3extralearners
@@ -223,7 +224,7 @@ cross_table_knn_HPLC$cross.table$t[1,]
 cross_table_knn_HPLC$cross.table$prop.tbl
 ```
 Partition HPLC for 100 iterations, for tunned model (k=7).
-```{r}
+```{r, include = FALSE}
 HPLC_sens_run_knn <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 100,
           operation = function(trainSet, trainCl, testSet, testCl) {
             trainSet.knn <- trainSet[,1:(ncol(trainSet)-1)]
@@ -232,11 +233,14 @@ HPLC_sens_run_knn <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7
             m <- knn(trainSet.knn, testSet.knn, trainCl, 7)
             return(m)
         })
+```
 
+```{r}
 #Calculate cumulative mean
 cum_mean_HPLC_knn <- cumulative.mean.accuracy(HPLC_sens_run_knn$accuracies)
 cum_mean_HPLC_knn
 ```
+
 
 ### Knn with enose
 Perform classification for knn on HPLC data merged with sens.
@@ -268,9 +272,10 @@ optimal2$bestk
 optimal2$bestScale
 
 
+
 ```
 Partition enose for 100 iterations, for tunned model (k=3).
-```{r}
+```{r, include = FALSE}
 enose_sens_run_knn <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 100,
           operation = function(trainSet, trainCl, testSet, testCl) {
             trainSet.knn <- trainSet[,1:(ncol(trainSet)-1)]
@@ -279,10 +284,17 @@ enose_sens_run_knn <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 
             m <- knn(trainSet.knn, testSet.knn, trainCl, 7)
             return(m)
         })
+```
 
+
+```{r, include = FALSE}
 #Calculate cumulative mean
 cum_mean_enose_knn <- cumulative.mean.accuracy(enose_sens_run_knn$accuracies)
 cum_mean_enose_knn
+```
+
+
+```{r, include = FALSE}
 ```
 
 ## Classification method 2:svm - rd
@@ -300,9 +312,9 @@ optimal_svm_hplc$bestCrossTable
 optimal_svm_hplc$bestConfusionMatrix
 ```
 
-```{r}
+```{r, include = FALSE}
 #Run the optimised model for 100 iterations, save the resulting accuracies list
-HPLC_sens_svm <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 100,
+HPLC_sens_run_svm <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 100,
           operation = function(trainSet, trainCl, testSet, testCl, kernel_type) {
             #Apply svm with kernel = rbfdot and 
             model_svm <- ksvm(sensory ~ ., data=trainSet,
@@ -310,11 +322,15 @@ HPLC_sens_svm <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 10
             kernel.predicted <- predict(model_svm, testSet, type="response")
             return(kernel.predicted)
         })
+```
 
+
+```{r}
 #Calculate cumulative mean
-cum_mean_HPLC_svm <- cumulative.mean.accuracy(HPLC_sens_svm$accuracies)
+cum_mean_HPLC_svm <- cumulative.mean.accuracy(HPLC_sens_run_svm$accuracies)
 cum_mean_HPLC_svm
 ```
+
 
 ### svm-rd with enose
 ```{r}
@@ -328,9 +344,9 @@ optimal_svm_enose$bestAccuracy
 optimal_svm_enose$bestKernel
 ```
 
-```{r}
+```{r, include = FALSE}
 #Run the optimised model for 100 iterations, save the resulting accuracies list
-enose_sens_svm <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 100,
+enose_sens_run_svm <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 100,
           operation = function(trainSet, trainCl, testSet, testCl, kernel_type) {
             #Apply svm with kernel = rbfdot and 
             model_svm <- ksvm(sensory ~ ., data=trainSet,
@@ -338,10 +354,17 @@ enose_sens_svm <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 0.7,
             kernel.predicted <- predict(model_svm, testSet, type="response")
             return(kernel.predicted)
         })
+```
 
+
+```{r}
 #Calculate cumulative mean
-cum_mean_enose_svm <- cumulative.mean.accuracy(enose_sens_svm$accuracies)
+cum_mean_enose_svm <- cumulative.mean.accuracy(enose_sens_run_svm$accuracies)
 cum_mean_enose_svm
+```
+
+
+```{r, include = FALSE}
 ```
 
 
@@ -399,7 +422,7 @@ test_HPLC_perf$plt
 #With 100 iterations, train and test the tunned model
 rf_accuracies_HPLC <- run_rf(rf_class_learner_HPLC$rf_task, times = 100, learner = learner_tun_HPLC, ratio = .7)
 #Calculate cumulative means accuracies
-cum_mean_HPLC_rf <- cumulative.mean.accuracy(rf_accuracies_HPLC)
+cum_mean_HPLC_rf <- cumulative.mean.accuracy(rf_accuracies_HPLC$accuracies)
 cum_mean_HPLC_rf
 ```
 
@@ -456,9 +479,11 @@ test_enose_perf$plt
 #With 100 iterations, train and test the tunned model
 rf_accuracies_enose <- run_rf(rf_class_learner_enose$rf_task, times = 100, learner = learner_tun_enose, ratio = .7)
 #Calculate cumulative means accuracies
-cum_mean_enose_rf <- cumulative.mean.accuracy(rf_accuracies_enose)
+cum_mean_enose_rf <- cumulative.mean.accuracy(rf_accuracies_enose$accuracies)
 cum_mean_enose_rf
 ```
+
+
 
 ## 1. Bar plot of all cumulative mean accuracy, for 100 iterations
 
@@ -473,5 +498,14 @@ cumulative_plot(cum_mean_HPLC_knn, cum_mean_HPLC_rf, cum_mean_HPLC_svm, "HPLC")
 
 ```{r}
 HPLC_sens_run_knn$misclas
+HPLC_sens_run_svm$misclas
+
+enose_sens_run_knn$misclas
+enose_sens_run_svm$misclas
+
+rf_accuracies_HPLC$misclas
+rf_accuracies_enose$misclas
+
+rf_accuracies_HPLC$misclas
 ```
 
