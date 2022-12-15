@@ -121,11 +121,16 @@ run_reg_model_iteration <- function(AllData, perc_pred, times, method, bacteria,
   #Calculate RMSE mean
   mean_RMSE = mean(list_RMSE[1:length(list_RMSE)])
   #Calculate RMSE sd
-  sd_RMSE
+  sd_RMSE = sd(list_RMSE)
   #Calculate RMSE 95% CI
-  CI_RMSE
-  return(list(list_RMSE = list_RMSE, mean_RMSE = mean_RMSE, 
-              model.fit = model.fit, predict.model = predict.model, observed = observed))
+  CI_RMSE = CI(list_RMSE, 0.95)
+  return(list(list_RMSE = list_RMSE, 
+              mean_RMSE = mean_RMSE, 
+              model.fit = model.fit, 
+              predict.model = predict.model, 
+              observed = observed,
+              sd_RMSE = sd_RMSE,
+              CI_RMSE = CI_RMSE))
 }
 
 
