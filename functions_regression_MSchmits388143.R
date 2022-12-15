@@ -68,9 +68,11 @@ run_reg_model_tuning <- function(AllData, perc_pred, times, bacteria,
 # Run selected regression for 100 iterations
 #Create partition, apply model, calculate and plot RMSE values
 run_reg_model_iteration <- function(AllData, perc_pred, times, method, bacteria, tuneGrid, preProcess){
-  #Store RMSE values
+  #Initialisation
   list_RMSE <- c()
   mean_RMSE <- 0
+  sd_RMSE <- 0
+  CI_RMSE <- 0
   #Attribute formula and predictor acording to bacteria
   if (bacteria == "TVC"){
     predictor = AllData$TVC
@@ -94,11 +96,15 @@ run_reg_model_iteration <- function(AllData, perc_pred, times, method, bacteria,
     trainCl <- trainSet[,ncol(trainSet)]
     testCl <- testSet[,ncol(testSet)]
     #Train the model
-    model.fit <- caret::train(formula, method = method, data = trainSet,
-                              tuneGrid = tuneGrid, metric = "RMSE", preProcess = preProcess)
-    #Predict model
+    model.fit <- caret::train(formula, 
+                              method = method, 
+                              data = trainSet,
+                              tuneGrid = tuneGrid, 
+                              metric = "RMSE", 
+                              preProcess = preProcess)
+    #Prediction model
     predict.model <- predict(model.fit, testSet)
-    #Calculate RMSE
+    #Calculate RMSE, depending on bacteria type
     if (bacteria == "TVC"){
       observed = testSet$TVC
       #Calculate RMSE values for TVC
@@ -112,7 +118,31 @@ run_reg_model_iteration <- function(AllData, perc_pred, times, method, bacteria,
     #Add RMSE to list
     list_RMSE <- append(list_RMSE, RMSE.val)
   }
+  #Calculate RMSE mean
   mean_RMSE = mean(list_RMSE[1:length(list_RMSE)])
+  #Calculate RMSE sd
+  sd_RMSE
+  #Calculate RMSE 95% CI
+  CI_RMSE
   return(list(list_RMSE = list_RMSE, mean_RMSE = mean_RMSE, 
               model.fit = model.fit, predict.model = predict.model, observed = observed))
+}
+
+
+#Plot of predicted against observed
+plot_obs_pred <- function(observed, predicted, title){
+  df_obs_pred <- data.frame(observed, predicted)
+  plt <- ggplot(df_obs_pred, aes(x = predicted, y = observed))+
+    geom_point(color = "steelblue")+
+    geom_smooth(method = "lm", color = "steelblue")+ #Fitted line x=y
+    labs(title = title,
+         x = "Predicted values", y = "Observed values")+
+    #Line at -1log difference from actual values
+    geom_smooth(method = "lm", color = "salmon", aes(y = observed - 1), se = FALSE)+
+    #Line at +1log difference from actual values
+    geom_smooth(method = "lm", color = "salmon", aes(y = observed + 1), se = FALSE)
+  
+  #Save plot
+  ggsave(file= paste("Plots/", title, ".png"))
+  return(plt)
 }

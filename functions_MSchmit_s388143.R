@@ -252,6 +252,7 @@ cross_table_knn <- function(trainSet, testSet, trainCl, testCl, k){
   ##accuracies: List of accuracies for each iteration
   ##model: Trained model
   ##misclas: Vector of misclassification, one per class
+
 model.run <- function(AllData, predict, perc_predict, times, operation){  
   set.seed(8)
   #Preserve correspondance between numerical and categorical data (predictor and response respectively)
@@ -301,6 +302,10 @@ model.run <- function(AllData, predict, perc_predict, times, operation){
 }
 
 #Cumulative means accuracy calculation
+#Arguments:
+  ##accuracies: list of accuracies
+#Returns:
+  ##cumulative.means: list of cumulated means accuracies
 cumulative.mean.accuracy <- function(accuracies){
   cumulative.means <- c()
   for(i in 1:length(accuracies)) {
@@ -312,6 +317,17 @@ cumulative.mean.accuracy <- function(accuracies){
 
 ############ SVM - rd #########
 #Tuning of SVM to find the best kernels
+#Arguments:
+  ##trainSet, testSet, trainCl, testCl: Train and test datasets after partition
+  ##kerbel: List of hyperparameters kernel to optimise
+#Returns:
+  ##bestAccuracy: Accuracy of the optimised model,
+  ##bestKernel: Kernel of the optimised model,
+  ##bestModel: Model of the optimised model,
+  ##bestPrediction: Prediction of the optimised model,
+  ##bestCrossTable: Cross table of the optimised model,
+  ##bestConfusionMatrix: Confusion matrix of the optimised model
+
 svm.optimisation <- function(trainSet, testSet, trainCl, testCl, kernel){
   #Variable initialisation
   bestAccuracy <- 0
