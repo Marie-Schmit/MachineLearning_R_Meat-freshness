@@ -1,5 +1,10 @@
+#Merging imported data
+#Arguments:
+  ##Predictor: predictor of the class
+  ##Predict: predicted class
+  ##AllData: data frame containing the imported data
+#Returns: data frame of merged predictor and predict
 
-# Merge imported data
 merge_data <- function(predictor, predict, AllData){
   # Combine all rows from enose and sensory
   merged <- merge(predictor, predict, by = "row.names")
@@ -8,6 +13,16 @@ merge_data <- function(predictor, predict, AllData){
   AllData <- as.data.frame(merged[-1])
   return(AllData)
 }
+
+
+#Plot pca
+#Arguments
+  ##pca.AllData: pca model of data
+  ##AllData: Data fram containing data of interest (imported and merged data)
+  ##ncomp: Number of components for pca
+  ##sensory: Vector of classes
+  ##style: Style of pca plot
+#Returns: Pca model of data
 
 pca_visualisation <- function(pca.AllData, AllData, ncomp, sensory, style){
   #Apply PCA
@@ -22,6 +37,14 @@ pca_visualisation <- function(pca.AllData, AllData, ncomp, sensory, style){
   return(pca.AllData)
 }
 
+
+#Create biplot of pca model
+##Arguments
+  ##pca.AllData: Pca model of all data
+  ##sensory: Vector of classes
+  ##AllData: Dataframe containing data of interest
+##Returns: Biplot of pca model
+
 pca_var <- function(pca.AllData, sensory, AllData){
   var_PC <- pca.AllData$prop_expl_var$X
   #Save plot
@@ -33,6 +56,12 @@ pca_var <- function(pca.AllData, sensory, AllData){
   ggsave(filename = paste("Plots/biplot_", main, ".png"), plot = biplt)
   return(biplt)
 }
+
+
+#Plot hca heatmap and dendograms
+#Arguments:
+  ##AllData: Data of interest
+#Returns: heatmap
 
 hca_visualisation <- function(AllData){
   # Distance matrix of Data without sensory column
@@ -57,6 +86,9 @@ hca_visualisation <- function(AllData){
 }
 
 #Save temperature and time (according to sample ID) in dataframe
+#Arguments:
+  ##AllData: Data of interest
+#Returns: AllData, dataframe of data of interest, with a column time and a column temperature
 temp_time <- function(AllData){
   #ID equal to list of temperature time
   ID <- strsplit(row.names(AllData), "F")
@@ -71,9 +103,13 @@ temp_time <- function(AllData){
 }
 
 
-# Function to partition dataset into train and test values
-## Return a list of two vectors (train and test)
-## perc_predict is the percentage of train data
+#Function to partition dataset into train and test values
+#Arguments:
+  ##AllData: dataframe containing the data of interest
+  ##Predict: Class or counts values
+  ##Times: number of iteration ofr the partition
+#Returns: List of dataset and vectors train and set
+
 partition_data <- function(AllData, predict, perc_predict, times){  
   set.seed(8)
   #Preserve correspondance between numerical and categorical data (predictor and response respectively)
@@ -93,9 +129,20 @@ partition_data <- function(AllData, predict, perc_predict, times){
   }
 }
 
+
 ############################# Classification #########################
-######### knn #########
+######### knn, svm #########
+
 #Model training and optimisation: find the best scale and k parameter
+#Arguments:
+  ##trainSet: Training set after partition
+  ##testSet: Test set after partition
+  ##trainCl: Training set factors
+  ##testCl: Test set factors
+  #scalingMethod: Scaling method (for instance: "knn")
+#Returns: List of best accuracy, best scaling method, best k, list of accuracies
+  #list of misclassifications
+
 knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMethod){
   #Remove the class variable of the train and test sets
   trainSet.knn <- trainSet[, -ncol(trainSet)]
@@ -167,7 +214,13 @@ knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMetho
               k.accuracies = k.accuracies))
 }
 
-#knn model and cross table display
+#Calculate model and cross table for knn
+#Returns:
+  ##trainSet: Training set after partition
+  ##trainSet: Training set after partition
+  ##trainCl: Training set of factors
+  ##testCl: Training set of factors
+#Returns:Knn model and cross table display
 cross_table_knn <- function(trainSet, testSet, trainCl, testCl, k){
   #Remove the class variable of the train and test sets
   trainSet.knn <- trainSet[, -ncol(trainSet)]
@@ -182,9 +235,23 @@ cross_table_knn <- function(trainSet, testSet, trainCl, testCl, k){
 }
 
 
-#Create a partition with times iteration
+#Create a partition with iterations
 #For each iteration, run the model and store the accuracy
 #Calculate the crosstable and number of missclassified elements for each iteration
+#Arguments:
+  ##AllData: Data of interest
+  ##predict: Classes values
+  ##perc_predict: Percentage of training values for partition
+  ##times: Number of iterations
+  ##operation: Function to apply to train and test datasets
+#Returns: List of
+  ##trainSet: Train data set
+  ##testSet: Test dataset
+  ##trainCl: Training factors dataset
+  ##testCl: Testing factors dataset
+  ##accuracies: List of accuracies for each iteration
+  ##model: Trained model
+  ##misclas: Vector of misclassification, one per class
 model.run <- function(AllData, predict, perc_predict, times, operation){  
   set.seed(8)
   #Preserve correspondance between numerical and categorical data (predictor and response respectively)
@@ -358,14 +425,18 @@ built_model <- function(learner_tun, instance, task_train){
 #Test model performances
 rf_test <- function(task_rf, learner, part_ratio, split, title){
   prediction = learner$predict(task_rf, split$test)
+  
   #Classification accuracy
   measure = msr("classif.acc")
   accuracy <- prediction$score(measure)
+  
   #Confusion matrix
   conf_matr <- prediction$confusion
+  
   #Inspect the frequency of each class 
   plt <- autoplot(prediction)+
     ggtitle(paste("Frequency plot random forest", title))
+  
   #Save frequency plot
   ggsave(file= paste("Plots/Test_RandomForest_", title, ".png"))
   return(list(accuracy = accuracy, conf_matr = conf_matr, plt = plt))
@@ -397,6 +468,7 @@ run_rf <- function(task, times, learner, ratio){
     
     #Calculate confusion matrix
     conf_matr <- prediction$confusion
+    
     #Calculate missclassifications
     misclas <- misclassification_confMatrix(conf_matr, mis_nb_sum, mis_prop_sum)
     mis_nb_sum <- misclas$mis_nb_sum
