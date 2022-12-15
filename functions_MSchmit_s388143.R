@@ -293,11 +293,11 @@ rf_class_learner <- function(AllData){
   rf_task = as_task_classif(sensory~., data=AllData)
   rf_task$data()
   main <- deparse(substitute(AllData)) #Name the plot acording to AllData
-  #Save the frequency plot
-  png(file= paste("Plots/RandomForest_", main, ".png"))
   #Inspect the frequency of each class 
-  plt <- autoplot(rf_task)
-  graphics.off()
+  plt <- autoplot(rf_task)+
+    ggtitle(paste("Random forest, frequency of class", main))
+  #Save the frequency plot
+  ggsave(file= paste("Plots/RandomForest_", main, ".png"))
   #Set the learner for classify random forest
   learner = lrn("classif.randomForest")
   return(list(rf_task = rf_task, learner = learner, plt = plt))
@@ -486,6 +486,17 @@ misclassified_proportion_barplot <- function(list_misclassified, titleList){
 
 
 ############# 3. Variables importance #########
+#Returns variable importance for knn
+var_importance <- function(AllData, predictor, perc_predict, times, formula, method, tuneGrid){
+  part <- partition_data(AllData, predictor, perc_predict, times)
+  
+  #Train the model
+  model.fit <- caret::train(formula, method = method, data = part$trainSet,
+                            tuneGrid = tuneGrid)
+  Imp <- as.data.frame(varImp(model.fit)$importance)
+  return(Imp)
+}
+
 #Returns variables importance for random forest
 rf_var_importance <- function(AllData, predict, perc_predict, times,
                               ntree, mtry, nodesize, maxnodes){

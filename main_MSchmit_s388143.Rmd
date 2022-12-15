@@ -60,6 +60,7 @@ Functions are saved in a dedicated script.
 ```{r}
 #Source the functions script
 source("functions_MSchmit_s388143.R")
+source("functions_regression_MSchmits388143.R", echo=TRUE)
 ```
 
 # Data preparation and exploratory analysis
@@ -507,10 +508,42 @@ list_proportions <- c("HPLC_knn", "HPLC_svm", "HPLC_rf",
 
 #Create and save barplots for every dataset and method
 misclassified_proportion_barplot(list_methods, list_proportions)
-
 ```
 
 ##3. Importance of each variable for the prediction for one iteration
+Variable importance for knn
+```{r}
+#Calculate the importance for knn
+#HPLC data
+knn_var_importance_HPLC <- var_importance(AllData_HPLC_sens, AllData_HPLC_sens$sensory, .7, 1, sensory~., method = "knn", tuneGrid = expand.grid(k = 1:20))
+
+#Importance plot
+importance_plot(knn_var_importance_HPLC, "HPLC, knn")
+
+#Enose data
+#HPLC data
+knn_var_importance_enose <- var_importance(AllData_enose_sens, AllData_enose_sens$sensory, .7, 1, sensory~., method = "knn", tuneGrid = expand.grid(k = 1:20))
+
+#Importance plot
+importance_plot(knn_var_importance_enose, "enose, knn")
+```
+Variable importance for svm
+```{r}
+#Calculate the importance for svm
+#HPLC data
+svm_var_importance_HPLC <- var_importance(AllData_HPLC_sens, AllData_HPLC_sens$sensory, .7, 1, sensory~., method = "svmRadial", tuneGrid = NULL)
+
+#Importance plot
+importance_plot(svm_var_importance_HPLC, "HPLC, svm")
+
+#Enose data
+svm_var_importance_enose <- var_importance(AllData_enose_sens, AllData_enose_sens$sensory, .7, 1, sensory~., method = "svmRadial", tuneGrid = NULL)
+
+#Importance plot
+importance_plot(svm_var_importance_enose, "enose, svm")
+```
+
+Variable importance for random forest
 ```{r}
 #Return table of variables importance for HPLC
 rf_var_importance_HPLC <- rf_var_importance(AllData_HPLC_sens, AllData_HPLC_sens$sensory,0.7, 1,
@@ -523,31 +556,61 @@ rf_var_importance_enose <- rf_var_importance(AllData_enose_sens, AllData_enose_s
                              ntree = 200L, mtry = 2L, nodesize = 2L, maxnodes = 20L)
 #Importance plot
 importance_plot(rf_var_importance_enose, "enose, rf")
+```
 
+# Regression
+## knn regression
+### HPLC data
+
+Apply knn regression to HPLC data, to both bacteria types. Train the model to find the best parameters possible.
+
+```{r}
+#Apply tuning to Pseudomonads, HPLC
+knn_tuning_HPLC_Pseud <- run_reg_model_tuning(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "knn", bacteria = "Pseudomonads", 
+                        tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
+
+#Apply tuning to TVC, HPLC
+knn_tuning_HPLC_TVC <- run_reg_model_tuning(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "knn", bacteria = "TVC", 
+                        tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
+
+knn_tuning_HPLC_Pseud
+knn_tuning_HPLC_TVC
+```
+
+Apply knn tuning to both bacteria types for enose data
+```{r}
+#Apply tuning to Pseudomonads, HPLC
+knn_tuning_enose_Pseud <- run_reg_model_tuning(AllData = AllData_enose_counts, perc_pred = .7, times = 1, method = "knn", bacteria = "Pseudomonads", 
+                        tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
+
+#Apply tuning to TVC, HPLC
+knn_tuning_enose_TVC <- run_reg_model_tuning(AllData = AllData_enose_counts, perc_pred = .7, times = 1, method = "knn", bacteria = "TVC", 
+                        tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
+
+knn_tuning_enose_Pseud
+knn_tuning_enose_TVC
+```
+
+```{r}
+#Run knn model for TVC bacteria counts, 1 iteration
+knn_model_HPLC_TVC <- run_reg_model(AllData = AllData_HPLC_counts, predictor = AllData_HPLC_counts$TVC, bacteria = "TVC", perc_pred = .7, times = 1, 
+                      formula = TVC~., method = "knn", tuneGrid = expand.grid(k = 1:20))
+
+summary(knn_model_HPLC_TVC$model.fit)
+knn_model_HPLC_TVC$predict.model
+knn_model_HPLC_TVC$RMSE.val
+knn_model_HPLC_TVC$plt_RMSE
 
 ```
 
-
 ```{r}
-model_svm <- svm(sensory ~ ., data=HPLC_part$trainSet)
-kernel.predicted <- predict(model_svm, HPLC_part$testSet, type="response")
-Imp <- varImp(model_svm)       
+#Run knn model for TVC bacteria counts, 1 iteration
+knn_model_HPLC_TVC <- run_reg_model_iteration(AllData = AllData_HPLC_counts, predictor = AllData_HPLC_counts$TVC, bacteria = "TVC", perc_pred = .7, times = 1, 
+                      formula = TVC~., method = "knn", tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
 
-ggplot(data = Imp)+
-    geom_bar(data = Imp, aes(x = colnames(Imp), y =  Imp[1]))
-
-require(rminer)
-require(generics)
-model <- fit(sensory~., data = HPLC_part$trainSet, model = "svm", kpar = list(sigma=0.1), C=1)
-
-  #Create barplot of variable importance
-  ggplot(data = Imp)+
-    geom_bar(data = Imp, aes(x = colnames(Imp), y =  Imp[1]))+
-    coord_flip()+
-    xlab("Classe")+
-    ylab("Sum of proportions of misclassification for 10 iteration")+
-    ggtitle(paste("Sum of proportions of misclassifications, ", titleList[i]))
-  #Save plot
-  ggsave(file= paste("Plots/MisclassifiedProportion_", titleList[i], ".png"))
+summary(knn_model_HPLC_TVC$model.fit)
+knn_model_HPLC_TVC$predict.model
+knn_model_HPLC_TVC$RMSE.val
+knn_model_HPLC_TVC$plt_RMSE
 ```
 
