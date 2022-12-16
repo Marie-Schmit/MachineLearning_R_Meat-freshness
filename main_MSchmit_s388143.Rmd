@@ -48,6 +48,7 @@ require("data.table")
 require("randomForest")
 require("reshape2")
 require("Rmisc")
+require("pls")
 ```
 ```{r}
 #Install mlr3extralearners
@@ -157,7 +158,7 @@ ggplot(data = counts_temp_time,
   #Color the lines by temperature
   geom_line(aes(colour = counts_temp_time$Temperature)) +
   #Add dashed lines for pseudomonads counts
-  geom_line(aes(y = as.numeric(counts_temp_time$Pseudomonads), 
+  geom_line(aes(y = as.numeric(counts_temp_time$Pseudomonads),
                 colour = counts_temp_time$Temperature), linetype = "dashed") +
   #Add labels
   xlab("Time (in hours)")+
@@ -174,9 +175,14 @@ ggsave(filename = paste("Plots/2_CountsPerTime.png"))
 ```{r}
 ggplot(data = counts_temp_time, mapping = aes())+
   #Boxes for TVC
-  geom_boxplot(aes(group = counts_temp_time$sensory, y = counts_temp_time$TVC, x = counts_temp_time$sensory-0.25, colour = "TVC"), width = 0.4)+
+  geom_boxplot(aes(group = counts_temp_time$sensory, 
+                   y = counts_temp_time$TVC, x = counts_temp_time$sensory-0.25,
+                   colour = "TVC"), width = 0.4)+
   #Boxes for pseudomonas
-  geom_boxplot(aes(group = counts_temp_time$sensory, y = counts_temp_time$Pseudomonads, x = counts_temp_time$sensory+0.25, colour = "Pseudomonads"), width = 0.4)+
+  geom_boxplot(aes(group = counts_temp_time$sensory, 
+                   y = counts_temp_time$Pseudomonads, 
+                   x = counts_temp_time$sensory+0.25, 
+                   colour = "Pseudomonads"), width = 0.4)+
   #Create legend
   scale_color_manual("",
                      breaks = c("TVC", "Pseudomonads"),
@@ -197,7 +203,8 @@ Partition the data once for HPLC.
 ```{r}
 #Use the function Partition to create a partition of data
 #Partition data from HPLC and sensory merged
-part_HPLC_sens <- partition_data(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 1)
+part_HPLC_sens <- partition_data(AllData_HPLC_sens, 
+                                 AllData_HPLC_sens$sensory, 0.7, 1)
 ```
 
 ## Knn classification
@@ -205,7 +212,8 @@ Perform classification for knn on HPLC data merged with sens.
 
 ```{r}
 #Optimisation of k without scaling
-optimal1 <- knn.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, 20, c())
+optimal1 <- knn.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet,
+                             part_HPLC_sens$trainCl, part_HPLC_sens$testCl, 20, c())
 
 optimal1
 
@@ -220,16 +228,22 @@ optimal2
 ```
 Display the cross table for tunned model (k=7)
 ```{r}
-cross_table_knn_HPLC <- cross_table_knn(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, k = 7)
+cross_table_knn_HPLC <- cross_table_knn(part_HPLC_sens$trainSet,
+                                        part_HPLC_sens$testSet,
+                                        part_HPLC_sens$trainCl,
+                                        part_HPLC_sens$testCl, k = 7)
+#Display cross table
 cross_table_knn_HPLC$cross.table$t
-cross_table_knn_HPLC$cross.table$t[1,]
-
+#Cross table, proportions
 cross_table_knn_HPLC$cross.table$prop.tbl
 ```
-Partition HPLC for 100 iterations, for tunned model (k=7).
+Partition HPLC for 100 iterations, for tunned model knn (k=7).
 ```{r, include = FALSE}
-HPLC_sens_run_knn <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 100,
-          operation = function(trainSet, trainCl, testSet, testCl) {
+#Run the operation knn
+HPLC_sens_run_knn <- model.run(AllData_HPLC_sens, 
+                               AllData_HPLC_sens$sensory, 
+                               0.7, 100,
+                               operation = function(trainSet, trainCl, testSet, testCl) {
             trainSet.knn <- trainSet[,1:(ncol(trainSet)-1)]
             testSet.knn <- testSet[,1:(ncol(testSet)-1)]
             #Apply knn model with k=7
@@ -241,10 +255,9 @@ HPLC_sens_run_knn <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7
 ```{r}
 #Calculate cumulative mean
 cum_mean_HPLC_knn <- cumulative.mean.accuracy(HPLC_sens_run_knn$accuracies)
+#Display cumulative means for tuned knn model (k = 7), for 100 iterations
 cum_mean_HPLC_knn
 ```
-
-
 ### Knn with enose
 Perform classification for knn on HPLC data merged with sens.
 Partition data
@@ -256,31 +269,40 @@ part_enose_sens <- partition_data(AllData_enose_sens, AllData_enose_sens$sensory
 Model tunning
 ```{r}
 #Optimisation of k without scaling
-optimal1 <- knn.optimisation(part_enose_sens$trainSet, part_enose_sens$testSet, part_enose_sens$trainCl, part_enose_sens$testCl, 20, c())
-
+optimal1 <- knn.optimisation(part_enose_sens$trainSet, 
+                             part_enose_sens$testSet, 
+                             part_enose_sens$trainCl, 
+                             part_enose_sens$testCl, 20, c())
+#Accuracy of optimal model for knn, enose, without pre scaling
 optimal1$bestAccuracy
+#k value of optimal model
 optimal1$bestk
 
 #Plot accuracy against time for non scaled data
-plot(x = c(1:20), y = optimal1$k.accuracies, type='l', 
-           main = "Accuracy by k without scale",
+plot(x = c(1:20), y = optimal1$k.accuracies, type='l',
+     main = "Accuracy by k without scale",
      xlab = "k",
      ylab = "Accuracy")
 
 #Optimisation of scale methods and k values
-optimal2 <- knn.optimisation(part_enose_sens$trainSet, part_enose_sens$testSet, part_enose_sens$trainCl, part_enose_sens$testCl, 20, c("center", "scale", "range"))
-
+optimal2 <- knn.optimisation(part_enose_sens$trainSet, 
+                             part_enose_sens$testSet, 
+                             part_enose_sens$trainCl, 
+                             part_enose_sens$testCl, 
+                             20, c("center", "scale", "range"))
+#Accuracy of optimal model for knn, enose, with scaling
 optimal2$bestAccuracy
+#k of optimal model, enose, with prescaling
 optimal2$bestk
+#SCale of optimal model, enose, with prescaling
 optimal2$bestScale
-
-
-
 ```
-Partition enose for 100 iterations, for tunned model (k=3).
+Partition enose for 100 iterations, for tunned model knn (k=3).
 ```{r, include = FALSE}
-enose_sens_run_knn <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 100,
-          operation = function(trainSet, trainCl, testSet, testCl) {
+enose_sens_run_knn <- model.run(AllData_enose_sens, 
+                                AllData_enose_sens$sensory, 
+                                0.7, 100,
+                                operation = function(trainSet, trainCl, testSet, testCl) {
             trainSet.knn <- trainSet[,1:(ncol(trainSet)-1)]
             testSet.knn <- testSet[,1:(ncol(testSet)-1)]
             #Apply knn model with k=7
@@ -289,39 +311,42 @@ enose_sens_run_knn <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 
         })
 ```
 
-
-```{r, include = FALSE}
+Calculate cumulative means of previous model for 100 iterations
+```{r}
 #Calculate cumulative mean
 cum_mean_enose_knn <- cumulative.mean.accuracy(enose_sens_run_knn$accuracies)
-cum_mean_enose_knn
+print(cum_mean_enose_knn)
 ```
-
-
-```{r, include = FALSE}
-```
-
-## Classification method 2:svm - rd
+## Classification method 2: svm - rd
 ### svm-rd with HCLP
 ```{r}
 #List of kernels to test for calssification
 kerList <- as.array(c('vanilladot', 'polydot', 'rbfdot', 'tanhdot'))
 
 #Optimisation of the model: test of kernels from the list
-optimal_svm_hplc <- svm.optimisation(part_HPLC_sens$trainSet, part_HPLC_sens$testSet, part_HPLC_sens$trainCl, part_HPLC_sens$testCl, kerList)
-
+optimal_svm_hplc <- svm.optimisation(part_HPLC_sens$trainSet, 
+                                     part_HPLC_sens$testSet, 
+                                     part_HPLC_sens$trainCl, 
+                                     part_HPLC_sens$testCl, kerList)
+#Accuracy, kernel, cross table and confusion matrix of tuned model
+print("Accuracy:")
 optimal_svm_hplc$bestAccuracy
+print("Kernel:")
 optimal_svm_hplc$bestKernel
-optimal_svm_hplc$bestCrossTable
+print("Cross table:")
+optimal_svm_hplc$bestCrossTable$t
+print("Confusion matrix:")
 optimal_svm_hplc$bestConfusionMatrix
 ```
 
 ```{r, include = FALSE}
 #Run the optimised model for 100 iterations, save the resulting accuracies list
-HPLC_sens_run_svm <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7, 100,
-          operation = function(trainSet, trainCl, testSet, testCl, kernel_type) {
+HPLC_sens_run_svm <- model.run(AllData_HPLC_sens, 
+                               AllData_HPLC_sens$sensory, 
+                               0.7, 100,
+                               operation = function(trainSet, trainCl, testSet, testCl, kernel_type) {
             #Apply svm with kernel = rbfdot and 
-            model_svm <- ksvm(sensory ~ ., data=trainSet,
-                                   kernel = "rbfdot", C=1)
+            model_svm <- ksvm(sensory ~ ., data=trainSet, kernel = "rbfdot", C=1)
             kernel.predicted <- predict(model_svm, testSet, type="response")
             return(kernel.predicted)
         })
@@ -329,9 +354,10 @@ HPLC_sens_run_svm <- model.run(AllData_HPLC_sens, AllData_HPLC_sens$sensory, 0.7
 
 
 ```{r}
-#Calculate cumulative mean
+#Calculate cumulative mean of previous model
 cum_mean_HPLC_svm <- cumulative.mean.accuracy(HPLC_sens_run_svm$accuracies)
-cum_mean_HPLC_svm
+#Print cumulative mean accuracy of 100th iteration
+cum_mean_HPLC_svm[100]
 ```
 
 
@@ -343,17 +369,19 @@ kerList <- as.array(c('vanilladot', 'polydot', 'rbfdot', 'tanhdot'))
 #Optimisation of the model: test of kernels from the list
 optimal_svm_enose <- svm.optimisation(part_enose_sens$trainSet, part_enose_sens$testSet, part_enose_sens$trainCl, part_enose_sens$testCl, kerList)
 
+#Print accuracy and kernel of tuned model
 optimal_svm_enose$bestAccuracy
 optimal_svm_enose$bestKernel
 ```
 
 ```{r, include = FALSE}
 #Run the optimised model for 100 iterations, save the resulting accuracies list
-enose_sens_run_svm <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 0.7, 100,
-          operation = function(trainSet, trainCl, testSet, testCl, kernel_type) {
+enose_sens_run_svm <- model.run(AllData_enose_sens, 
+                                AllData_enose_sens$sensory, 
+                                0.7, 100,
+                                operation = function(trainSet, trainCl, testSet, testCl, kernel_type) {
             #Apply svm with kernel = rbfdot and 
-            model_svm <- ksvm(sensory ~ ., data=trainSet,
-                                   kernel = "rbfdot", C=1)
+            model_svm <- ksvm(sensory ~ ., data=trainSet, kernel = "rbfdot", C=1)
             kernel.predicted <- predict(model_svm, testSet, type="response")
             return(kernel.predicted)
         })
@@ -363,13 +391,14 @@ enose_sens_run_svm <- model.run(AllData_enose_sens, AllData_enose_sens$sensory, 
 ```{r}
 #Calculate cumulative mean
 cum_mean_enose_svm <- cumulative.mean.accuracy(enose_sens_run_svm$accuracies)
-cum_mean_enose_svm
+#Print cumulative mean accuracy of 100th iteration
+cum_mean_enose_svm[100]
 ```
 
 ## Classification method 3: Random Forest
 ### RF with data HPLC
 
-Model building: create model task
+Model building: Create model task
 ```{r}
 #Create a learner
 rf_class_learner_HPLC <- rf_class_learner(AllData_HPLC_sens)
@@ -390,24 +419,31 @@ rf_tuning_HPLC <- rf_tuning(ntree_min = 200, ntree_max = 500,
                             nodesize_min = 1, nodesize_max = 5, 
                             maxnodes_min = 2, maxnodes_max = 20, 
                             nb_evaluation = 20, part_ratio = .7, 
-                            task_rf = rf_class_learner_HPLC$rf_task, AllData = AllData_HPLC_sens
-                      )
+                            task_rf = rf_class_learner_HPLC$rf_task, 
+                            AllData = AllData_HPLC_sens
+                            )
 ```
-Best hyperparameters
+Best hyperparameters for tuning rf learner, HPLC
 ```{r}
 rf_tuning_HPLC$instance$result_learner_param_vals
 ```
 
-Build final model with the tunned parameters
+Build final model with the tuned parameters for HPLC, rf
 ```{r}
-learner_tun_HPLC <- built_model(learner_tun = rf_tuning_HPLC$learner_tun, instance = rf_tuning_HPLC$instance, task_train = rf_tuning_HPLC$task_train)
-
+learner_tun_HPLC <- built_model(learner_tun = rf_tuning_HPLC$learner_tun, 
+                                instance = rf_tuning_HPLC$instance, 
+                                task_train = rf_tuning_HPLC$task_train)
+#Print tuned model
 learner_tun_HPLC$model
 ```
 
 Test final model
 ```{r}
-test_HPLC_perf <- rf_test(rf_class_learner_HPLC$rf_task, learner_tun_HPLC, part_ratio = .7, split = rf_tuning_HPLC$split, title = "HPLC")
+test_HPLC_perf <- rf_test(rf_class_learner_HPLC$rf_task, 
+                          learner_tun_HPLC, 
+                          part_ratio = .7, 
+                          split = rf_tuning_HPLC$split, 
+                          title = "HPLC")
 #Print accuracy
 test_HPLC_perf$accuracy
 #Print confusion matrix
@@ -415,56 +451,67 @@ test_HPLC_perf$conf_matr
 #Plot performances
 test_HPLC_perf$plt
 ```
-
+Classification with rf, 100 iterations, HPLC
 ```{r}
-#With 100 iterations, train and test the tunned model
-rf_accuracies_HPLC <- run_rf(rf_class_learner_HPLC$rf_task, times = 100, learner = learner_tun_HPLC, ratio = .7)
+#With 100 iterations, train and test the tuned model
+rf_accuracies_HPLC <- run_rf(rf_class_learner_HPLC$rf_task, 
+                             times = 100, 
+                             learner = learner_tun_HPLC, 
+                             ratio = .7)
 #Calculate cumulative means accuracies
 cum_mean_HPLC_rf <- cumulative.mean.accuracy(rf_accuracies_HPLC$accuracies)
-cum_mean_HPLC_rf
+#Cumulative mean accuracy of 100th iteration:
+cum_mean_HPLC_rf[100]
 ```
-
 
 ### RF with enose
 Model building: create model task
 ```{r}
-#Create a learner
+#Create a learner for rf with enose data
 rf_class_learner_enose <- rf_class_learner(AllData_enose_sens)
 rf_class_learner_enose$rf_task
 #Check the number of elements for each sensory
 rf_class_learner_enose$plt
 ```
-Model tunning
+Model tunning, rf with enose data
 ```{r}
 #List of hypoparameters
 rf_class_learner_enose$learner$param_set$ids()
 ```
 
 ```{r}
-#Pefrom tuning for enose
+#Perfrom tuning for rf, enose
 rf_tuning_enose <- rf_tuning(ntree_min = 200, ntree_max = 500, 
                             mtry_min = 2, mtry_max = 8,
                             nodesize_min = 1, nodesize_max = 5, 
                             maxnodes_min = 2, maxnodes_max = 20, 
                             nb_evaluation = 20, part_ratio = .7, 
-                            task_rf = rf_class_learner_enose$rf_task, AllData = AllData_enose_sens
+                            task_rf = rf_class_learner_enose$rf_task, 
+                            AllData = AllData_enose_sens
                       )
 ```
 Best hyperparameters
 ```{r}
+#Display optimised hyperparameters
 rf_tuning_enose$instance$result_learner_param_vals
 ```
 
-Build final model with the tunned parameters
+Build final model with the tuned parameters
 ```{r}
-learner_tun_enose <- built_model(learner_tun = rf_tuning_enose$learner_tun, instance = rf_tuning_enose$instance, task_train = rf_tuning_enose$task_train)
-
+learner_tun_enose <- built_model(learner_tun = rf_tuning_enose$learner_tun, 
+                                 instance = rf_tuning_enose$instance, 
+                                 task_train = rf_tuning_enose$task_train)
+#Display tuned learner
 learner_tun_enose$model
 ```
 
-Test final model
+Test final model, tuned rf for enose data
 ```{r}
-test_enose_perf <- rf_test(rf_class_learner_enose$rf_task, learner_tun_enose, part_ratio = .7, split = rf_tuning_enose$split, title = "enose")
+test_enose_perf <- rf_test(rf_class_learner_enose$rf_task, 
+                           learner_tun_enose, 
+                           part_ratio = .7, 
+                           split = rf_tuning_enose$split, 
+                           title = "enose")
 #Print accuracy
 test_enose_perf$accuracy
 #Print confusion matrix
@@ -472,18 +519,19 @@ test_enose_perf$conf_matr
 #Plot performances
 test_enose_perf$plt
 ```
-
+100 iterations, tuned rf for enose data
 ```{r}
 #With 100 iterations, train and test the tunned model
-rf_accuracies_enose <- run_rf(rf_class_learner_enose$rf_task, times = 100, learner = learner_tun_enose, ratio = .7)
+rf_accuracies_enose <- run_rf(rf_class_learner_enose$rf_task, 
+                              times = 100, 
+                              learner = learner_tun_enose, 
+                              ratio = .7)
 #Calculate cumulative means accuracies
 cum_mean_enose_rf <- cumulative.mean.accuracy(rf_accuracies_enose$accuracies)
-cum_mean_enose_rf
+#Cumulative mean accuracy for 100th iteration
+cum_mean_enose_rf[100]
 ```
-
-
-
-## 1. Bar plot of all cumulative mean accuracy, for 100 iterations
+## 1. Bar plot of all cumulative mean accuracies, for 100 iterations
 
 ```{r}
 #Create and save cumulative means plot for enose
@@ -495,8 +543,7 @@ cumulative_plot(cum_mean_HPLC_knn, cum_mean_HPLC_rf, cum_mean_HPLC_svm, "HPLC")
 ## 2. Number and proportion of misclassified samples
 
 ```{r}
-#Barplot of misclassification proportion per class
-
+#Barplot of misclassifications proportion per class
 list_methods <- list(HPLC_sens_run_knn$misclas$mis_prop_sum, 
                   HPLC_sens_run_svm$misclas$mis_prop_sum, 
                   rf_accuracies_HPLC$misclas$mis_prop_sum,
@@ -515,46 +562,59 @@ misclassified_proportion_barplot(list_methods, list_proportions)
 Variable importance for knn
 ```{r}
 #Calculate the importance for knn
-#HPLC data
-knn_var_importance_HPLC <- var_importance(AllData_HPLC_sens, AllData_HPLC_sens$sensory, .7, 1, sensory~., method = "knn", tuneGrid = expand.grid(k = 1:20))
-
-#Importance plot
+#HPLC data importances, kn
+knn_var_importance_HPLC <- var_importance(AllData_HPLC_sens,
+                                          AllData_HPLC_sens$sensory, .7, 1,
+                                          sensory~., method = "knn", 
+                                          tuneGrid = expand.grid(k = 1:20))
+#Importance plot HPLC data, knn
 importance_plot(knn_var_importance_HPLC, "HPLC, knn")
 
-#Enose data
-#HPLC data
-knn_var_importance_enose <- var_importance(AllData_enose_sens, AllData_enose_sens$sensory, .7, 1, sensory~., method = "knn", tuneGrid = expand.grid(k = 1:20))
-
-#Importance plot
+#Enose data importances, knn
+knn_var_importance_enose <- var_importance(AllData_enose_sens,
+                                           AllData_enose_sens$sensory, .7, 1,
+                                           sensory~., method = "knn", 
+                                           tuneGrid = expand.grid(k = 1:20))
+#Importance plot enose data, knn
 importance_plot(knn_var_importance_enose, "enose, knn")
 ```
 Variable importance for svm
 ```{r}
 #Calculate the importance for svm
-#HPLC data
-svm_var_importance_HPLC <- var_importance(AllData_HPLC_sens, AllData_HPLC_sens$sensory, .7, 1, sensory~., method = "svmRadial", tuneGrid = NULL)
-
-#Importance plot
+#HPLC data importances, svm
+svm_var_importance_HPLC <- var_importance(AllData_HPLC_sens,
+                                          AllData_HPLC_sens$sensory, .7, 1,
+                                          sensory~., method = "svmRadial", 
+                                          tuneGrid = NULL)
+#Importance plot, HPLC, svm
 importance_plot(svm_var_importance_HPLC, "HPLC, svm")
 
-#Enose data
-svm_var_importance_enose <- var_importance(AllData_enose_sens, AllData_enose_sens$sensory, .7, 1, sensory~., method = "svmRadial", tuneGrid = NULL)
-
-#Importance plot
+#Enose data importances, svm
+svm_var_importance_enose <- var_importance(AllData_enose_sens,
+                                           AllData_enose_sens$sensory, .7, 1,
+                                           sensory~., method = "svmRadial", 
+                                           tuneGrid = NULL)
+#Importance plot, enose, svm
 importance_plot(svm_var_importance_enose, "enose, svm")
 ```
 
 Variable importance for random forest
 ```{r}
 #Return table of variables importance for HPLC
-rf_var_importance_HPLC <- rf_var_importance(AllData_HPLC_sens, AllData_HPLC_sens$sensory,0.7, 1,
-                             ntree = 200L, mtry = 2L, nodesize = 2L, maxnodes = 20L)
+rf_var_importance_HPLC <- rf_var_importance(AllData_HPLC_sens,
+                                            AllData_HPLC_sens$sensory,
+                                            0.7, 1,
+                                            ntree = 200L, 
+                                            mtry = 2L, 
+                                            nodesize = 2L, 
+                                            maxnodes = 20L)
 #Importance plot
 importance_plot(rf_var_importance_HPLC, "HPLC, rf")
 
 #Variables importance for enose
-rf_var_importance_enose <- rf_var_importance(AllData_enose_sens, AllData_enose_sens$sensory,0.7, 1,
-                             ntree = 200L, mtry = 2L, nodesize = 2L, maxnodes = 20L)
+rf_var_importance_enose <- rf_var_importance(AllData_enose_sens,
+                                             AllData_enose_sens$sensory,0.7, 1,
+                                             ntree = 200L, mtry = 2L, nodesize = 2L, maxnodes = 20L)
 #Importance plot
 importance_plot(rf_var_importance_enose, "enose, rf")
 ```
@@ -566,12 +626,20 @@ Apply knn regression to HPLC data, to both bacteria types. Train the model to fi
 
 ```{r}
 #Apply tuning to Pseudomonads, HPLC
-knn_tuning_HPLC_Pseud <- run_reg_model_tuning(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "knn", bacteria = "Pseudomonads", 
-                        tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
+knn_tuning_HPLC_Pseud <- run_reg_model_tuning(AllData = AllData_HPLC_counts,
+                                              perc_pred = .7, 
+                                              times = 1, 
+                                              method = "knn", 
+                                              bacteria = "Pseudomonads",
+                                              tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
 
 #Apply tuning to TVC, HPLC
-knn_tuning_HPLC_TVC <- run_reg_model_tuning(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "knn", bacteria = "TVC", 
-                        tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
+knn_tuning_HPLC_TVC <- run_reg_model_tuning(AllData = AllData_HPLC_counts, 
+                                            perc_pred = .7, 
+                                            times = 1, 
+                                            method = "knn", 
+                                            bacteria = "TVC",
+                                            tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
 
 #Display if preprocessing is necessary
 knn_tuning_HPLC_Pseud$preProcess
@@ -585,12 +653,21 @@ knn_tuning_HPLC_TVC$model.fit$bestTune
 Apply knn tuning to both bacteria types for enose data
 ```{r}
 #Apply tuning to Pseudomonads, HPLC
-knn_tuning_enose_Pseud <- run_reg_model_tuning(AllData = AllData_enose_counts, perc_pred = .7, times = 1, method = "knn", bacteria = "Pseudomonads", 
-                        tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
+knn_tuning_enose_Pseud <- run_reg_model_tuning(AllData = AllData_enose_counts,
+                                               perc_pred = .7, 
+                                               times = 1, 
+                                               method = "knn", 
+                                               bacteria = "Pseudomonads",
+                                               tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
 
 #Apply tuning to TVC, HPLC
-knn_tuning_enose_TVC <- run_reg_model_tuning(AllData = AllData_enose_counts, perc_pred = .7, times = 1, method = "knn", bacteria = "TVC", 
-                        tuneGrid = expand.grid(k = 1:20), preProcess = c("center","scale"))
+knn_tuning_enose_TVC <- run_reg_model_tuning(AllData = AllData_enose_counts,
+                                             perc_pred = .7, 
+                                             times = 1, 
+                                             method = "knn", 
+                                             bacteria = "TVC",
+                                             tuneGrid = expand.grid(k = 1:20),
+                                             preProcess = c("center","scale"))
 
 knn_tuning_enose_Pseud$preProcess
 knn_tuning_enose_TVC$preProcess
@@ -694,8 +771,8 @@ knn_reg_enose_Pseudo$CI_RMSE
 Plot observed against predicted data for knn, enose, pseudomonads
 ```{r}
 plt <- plot_obs_pred(knn_reg_enose_Pseudo$observed, 
-                     knn_reg_enose_Pseudo$predict.model, 
-                     "Observed against predicted - KNN - enose pseudomonads")
+                   knn_reg_enose_Pseudo$predict.model, 
+                  "Observed against predicted - KNN - enose pseudomonads")
 
 plt
 ```
@@ -756,75 +833,6 @@ rf_tuning_enose_TVC$preProcess
 rf_tuning_enose_Pseud$model.fit$bestTune
 rf_tuning_enose_TVC$model.fit$bestTune
 ```
-
-
-
-
-________________________________________________________________________________________
-####################################################################################
-
-START Discard !!!
-
-####################################################################################
-________________________________________________________________________________________
-
-```{r}
-# #rf for HPLC, TVC
-# tun_rf_HPLC_tvc <- run_reg_model_iteration(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "rf", bacteria = "TVC", 
-#                         tuneGrid = expand.grid(mtry = 2:19))
-# 
-# #Display best tune for random forest
-# tun_rf_HPLC_tvc$model.fit$bestTune
-# tun_rf_HPLC_tvc$model.fit
-# tun_rf_HPLC_tvc$mean_RMSE
-```
-
-```{r}
-# #rf for HPLC, Pseudomonads
-# tun_rf_HPLC_Pseudo <- run_reg_model_iteration(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "rf", bacteria = "Pseudomonads", 
-#                         tuneGrid = expand.grid(mtry = 2:19))
-# 
-# #Display best tune for random forest
-# tun_rf_HPLC_Pseudo$model.fit$bestTune
-# tun_rf_HPLC_Pseudo$model.fit
-# tun_rf_HPLC_Pseudo$mean_RMSE
-```
-
-### Train and predict random forest for 100 iterations
-For enose, apply random forest (rf) regression, tuning for parameter mtry
-```{r}
-# #rf for enose, TVC
-# tun_rf_enose_tvc <- run_reg_model_iteration(AllData = AllData_enose_counts, 
-#                                             perc_pred = .7, times = 1, 
-#                                             method = "rf", bacteria = "TVC", 
-#                                             tuneGrid = expand.grid(mtry = 2:9), 
-#                                             preProcess = c("center","scale"))
-# 
-# #Display best tune for random forest
-# tun_rf_enose_tvc$model.fit$bestTune
-# tun_rf_enose_tvc$model.fit
-# tun_rf_enose_tvc$mean_RMSE
-```
-
-```{r}
-# #rf for enose, Pseudomonads
-# tun_rf_enose_Pseudo <- run_reg_model_iteration(AllData = AllData_enose_counts, perc_pred = .7, times = 1, method = "rf", bacteria = "Pseudomonads", 
-#                         tuneGrid = expand.grid(mtry = 2:9))
-# 
-# #Display best tune for random forest
-# tun_rf_enose_Pseudo$model.fit$bestTune
-# tun_rf_enose_Pseudo$model.fit
-# tun_rf_enose_Pseudo$mean_RMSE
-```
-
-
-________________________________________________________________________________________
-####################################################################################
-
-END Discard !!!
-
-####################################################################################
-__________________________________________________________________________________
 
 ### 100 iterations
 
@@ -928,6 +936,148 @@ Plot observed against predicted data for rf, enose, pseudomonads
 plt <- plot_obs_pred(run_rf_enose_Pseudo$observed, 
                      run_rf_enose_Pseudo$predict.model, 
                      "Observed against predicted - RF - enose pseudomonads")
+
+plt
+```
+
+## PLS regression
+
+Apply partial least regression to HPLC data, to both bacteria types. Optimise, train and test the model.
+
+### Tuning
+
+```{r}
+#Apply tuning to Pseudomonads, HPLC
+plsr_tuning_HPLC_Pseud <- run_reg_model_tuning(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "pls", bacteria = "Pseudomonads", 
+                        tuneGrid = expand.grid(ncomp = 1:20), preProcess = c("center","scale"))
+
+#Apply tuning to TVC, HPLC
+plsr_tuning_HPLC_TVC <- run_reg_model_tuning(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "pls", bacteria = "TVC", 
+                        tuneGrid = expand.grid(ncomp = 1:20), preProcess = c("center","scale"))
+
+#Display if preprocessing is necessary
+plsr_tuning_HPLC_Pseud$preProcess
+plsr_tuning_HPLC_TVC$preProcess
+#Display best tunings
+plsr_tuning_HPLC_Pseud$model.fit$bestTune
+plsr_tuning_HPLC_TVC$model.fit$bestTune
+
+```
+
+Apply pls tuning to both bacteria types for enose data
+```{r}
+#Apply tuning to Pseudomonads, HPLC
+pls_tuning_enose_Pseud <- run_reg_model_tuning(AllData = AllData_enose_counts, perc_pred = .7, times = 1, method = "pls", bacteria = "Pseudomonads", 
+                        tuneGrid = expand.grid(ncomp = 1:10), preProcess = c("center","scale"))
+
+#Apply tuning to TVC, HPLC
+pls_tuning_enose_TVC <- run_reg_model_tuning(AllData = AllData_enose_counts, perc_pred = .7, times = 1, method = "pls", bacteria = "TVC", 
+                        tuneGrid = expand.grid(ncomp = 1:10), preProcess = c("center","scale"))
+
+pls_tuning_enose_Pseud$preProcess
+pls_tuning_enose_TVC$preProcess
+#Display best tunings
+pls_tuning_enose_Pseud$model.fit$bestTune
+pls_tuning_enose_TVC$model.fit$bestTune
+```
+
+
+Apply the tuned pls model to HPLC, for TVC and for 100 iteration
+```{r, warning=FALSE}
+pls_HPLC_TVC <- run_reg_model_iteration(AllData = AllData_HPLC_counts, 
+                                        perc_pred = .7, 
+                                        times = 100, 
+                                        method = "pls", 
+                                        bacteria = "TVC",
+                                        tuneGrid = expand.grid(ncomp = 1:20), 
+                                        preProcess = NULL)
+#Mean of RMSE for 100 iterations
+pls_HPLC_TVC$mean_RMSE
+pls_HPLC_TVC$sd_RMSE
+pls_HPLC_TVC$CI_RMSE
+```
+Plot observed against predicted data for knn, HPLC, TVC
+```{r}
+plt <- plot_obs_pred(pls_HPLC_TVC$observed, 
+                     pls_HPLC_TVC$predict.model, 
+                     "Observed against predicted - PLS - HPLC TVC")
+
+plt
+```
+
+pls model to HPLC, Pseudomonads, 100 iterations
+```{r, warning=FALSE}
+pls_reg_HPLC_Pseudo <- run_reg_model_iteration(AllData = AllData_HPLC_counts, 
+                                               perc_pred = .7, 
+                                               times = 100, 
+                                               method = "pls", 
+                                               bacteria = "Pseudomonads",
+                                               tuneGrid = expand.grid(ncomp = 1:20),
+                                               preProcess = NULL)
+#Mean of RMSE for 100 iterations
+pls_reg_HPLC_Pseudo$mean_RMSE
+#sd of RMSE
+pls_reg_HPLC_Pseudo$sd_RMSE
+#95% CI of RMSE
+pls_reg_HPLC_Pseudo$CI_RMSE
+```
+Plot observed against predicted data for pls, HPLC, Pseudomonads
+```{r}
+plt <- plot_obs_pred(pls_reg_HPLC_Pseudo$observed, 
+                     pls_reg_HPLC_Pseudo$predict.model, 
+                     "Observed against predicted - PLS - HPLC pseudomonads")
+
+plt
+```
+
+pls model to enose, TVC, 100 iterations
+```{r, warning=FALSE}
+pls_reg_enose_TVC <- run_reg_model_iteration(AllData = AllData_enose_counts, 
+                                             perc_pred = .7, 
+                                             times = 100, 
+                                             method = "pls", 
+                                             bacteria = "TVC",
+                                             tuneGrid = expand.grid(ncomp = 1:10), 
+                                             preProcess = NULL)
+
+#Mean of RMSE for 100 iterations
+pls_reg_enose_TVC$mean_RMSE
+#sd of RMSE
+pls_reg_enose_TVC$sd_RMSE
+#95% of RMSE
+pls_reg_enose_TVC$CI_RMSE
+```
+Plot observed against predicted data for knn, enose, TVC
+```{r}
+plt <- plot_obs_pred(pls_reg_enose_TVC$observed, 
+                     pls_reg_enose_TVC$predict.model, 
+                     "Observed against predicted - PLS - enose TVC")
+
+plt
+```
+
+
+pls model to enose, Pseudomonads, 100 iterations
+```{r, warning=FALSE}
+pls_reg_enose_Pseudo <- run_reg_model_iteration(AllData = AllData_enose_counts, 
+                                                perc_pred = .7, 
+                                                times = 100, 
+                                                method = "pls", 
+                                                bacteria = "Pseudomonads", 
+                                                tuneGrid = expand.grid(ncomp = 1:10),
+                                                preProcess = NULL)
+#Mean of RMSE for 100 iterations
+pls_reg_enose_Pseudo$mean_RMSE
+#sd of RMSE
+pls_reg_enose_Pseudo$sd_RMSE
+#95% CI of RMSE
+pls_reg_enose_Pseudo$CI_RMSE
+```
+Plot observed against predicted data for pls, enose, pseudomonads
+```{r}
+plt <- plot_obs_pred(pls_reg_enose_Pseudo$observed, 
+                   pls_reg_enose_Pseudo$predict.model, 
+                  "Observed against predicted - PLS - enose pseudomonads")
 
 plt
 ```

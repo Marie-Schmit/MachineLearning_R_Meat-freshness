@@ -574,7 +574,10 @@ cumulative_plot <-  function(cum_mean_knn,
   df_cum_means <- melt(accuracy_cumulative_means, id = "id")
   names(df_cum_means) <- c("id", "func", "value")
   
-  ggplot() + geom_line(data = df_cum_means, aes(x = id, y = value, color = func, group = func), size = 1)+
+  ggplot() +
+    geom_line(data = df_cum_means, 
+                       aes(x = id, y = value, color = func, group = func), 
+                       size = 1)+
     ggtitle(paste("Cumulative mean accuracies for", dataset, "data"))
   #Save plot
   ggsave(file= paste("Plots/Cumulative_means_", dataset, ".png"))
@@ -683,7 +686,7 @@ var_importance <- function(AllData,
   model.fit <- caret::train(formula, method = method, data = part$trainSet,
                             tuneGrid = tuneGrid)
   Imp <- as.data.frame(varImp(model.fit)$importance)
-  return(Imp)
+  return(list(Imp = Imp, finalModel = model.fit$finalModel, Results = model.fit$results))
 }
 
 #Returns variables importance for random forest
@@ -706,8 +709,10 @@ rf_var_importance <- function(AllData,
                               nodesize, 
                               maxnodes){
   part <- partition_data(AllData, predict, perc_predict, times)
-  randomF <- randomForest(sensory~., data=part$trainSet, importance = TRUE, 
-                          ntree = ntree, mtry = mtry, nodesize = nodesize, maxnodes = 20L)
+  randomF <- randomForest(sensory~., data=part$trainSet, 
+                          importance = TRUE, 
+                          ntree = ntree, mtry = mtry, 
+                          nodesize = nodesize, maxnodes = 20L)
   Imp <- as.data.frame(varImp(randomF))
   return(Imp)
 }

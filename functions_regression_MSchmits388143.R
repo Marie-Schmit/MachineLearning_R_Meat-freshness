@@ -34,7 +34,7 @@ run_reg_model_tuning <- function(AllData, perc_pred, times, bacteria,
   
   #RMSE for k nearest neighbours regression with and without preProcessing
   predict.model.preProcess <- predict(model.fit.preProcess, part$testSet)
-  predict.model <- predict(model.fit, part$testSet)
+  predict.model <- predict(model.fit$final.model, part$testSet)
   
   if (bacteria == "TVC"){
     #Calculate RMSE values for TVC
