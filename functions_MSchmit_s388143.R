@@ -5,7 +5,9 @@
   ##AllData: data frame containing the imported data
 #Returns: data frame of merged predictor and predict
 
-merge_data <- function(predictor, predict, AllData){
+merge_data <- function(predictor, 
+                       predict, 
+                       AllData){
   # Combine all rows from enose and sensory
   merged <- merge(predictor, predict, by = "row.names")
   rownames(merged) = merged[,1]
@@ -24,7 +26,11 @@ merge_data <- function(predictor, predict, AllData){
   ##style: Style of pca plot
 #Returns: Pca model of data
 
-pca_visualisation <- function(pca.AllData, AllData, ncomp, sensory, style){
+pca_visualisation <- function(pca.AllData, 
+                              AllData, 
+                              ncomp, 
+                              sensory, 
+                              style){
   #Apply PCA
   pca.AllData <- pca(AllData, ncomp = ncomp, scale = TRUE)
   #Save plot
@@ -45,7 +51,9 @@ pca_visualisation <- function(pca.AllData, AllData, ncomp, sensory, style){
   ##AllData: Dataframe containing data of interest
 ##Returns: Biplot of pca model
 
-pca_var <- function(pca.AllData, sensory, AllData){
+pca_var <- function(pca.AllData, 
+                    sensory, 
+                    AllData){
   var_PC <- pca.AllData$prop_expl_var$X
   #Save plot
   main <- deparse(substitute(AllData)) #Name the plot acording to AllData
@@ -140,32 +148,33 @@ partition_data <- function(AllData, predict, perc_predict, times){
   ##trainCl: Training set factors
   ##testCl: Test set factors
   #scalingMethod: Scaling method (for instance: "knn")
+  #n: Number of k to test
 #Returns: List of best accuracy, best scaling method, best k, list of accuracies
   #list of misclassifications
 
-knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMethod){
+knn.optimisation <- function(trainSet, 
+                             testSet, 
+                             trainCl, 
+                             testCl, 
+                             n, 
+                             scalingMethod){
   #Remove the class variable of the train and test sets
   trainSet.knn <- trainSet[, -ncol(trainSet)]
   testSet.knn <- testSet[, -ncol(testSet)]
-  
   #Variable initialisation
   k.accuracies <- c()
   bestAccuracy <- 0
   currentScale <- c()
   currentk <- 0
   bestk <- 0
-
   # Find best k without scaling
   # test of k values from 1 to 20
-  
   for (currentk in 1:n) {
     model.k<-knn(trainSet.knn, testSet.knn, trainCl, currentk)
     confusion.matrix <- confusionMatrix(model.k, testCl, positive="1")
     modelAccuracy <- confusion.matrix$overall[1] #Accuracy
-  
     #List of all accuracies to plot the accuracy values against k values
     k.accuracies <- c(k.accuracies, modelAccuracy)
-    
     if(modelAccuracy > bestAccuracy){
       bestAccuracy <- modelAccuracy
       bestScale <- currentScale
@@ -175,29 +184,23 @@ knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMetho
       bestModel <- model.k
     }
   }
-
   #Test different scales to find the best
   for (currentScale in scalingMethod){
     #Test different k from 1 to n to find the best
     for (currentk in seq(1, n, 1)){
       #Define scaling method for three types of scaling
       preProcValues <- preProcess(trainSet.knn, method = currentScale)
-      
       #Apply scaling
       trainTransformed <- predict(preProcValues, trainSet.knn)
       testTransformed <- predict(preProcValues, testSet.knn)
-      
       #Create model with scaled data
       model.k <- knn(trainTransformed, testTransformed, trainCl, currentk)
-      
       #Evaluate accuracy of the model
       #1 is the positive value, when the meat is fresh
       confusion.matrix <- confusionMatrix(model.k, testCl, positive="1")
       modelAccuracy <- confusion.matrix$overall[1] #Accuracy
-      
       #List of accuracies to plot the accuracy values against k values
       k.accuracies <- c(k.accuracies, modelAccuracy)
-      
       # If the previous models are outperformed, current accuracy is the new best accuracy
       if(modelAccuracy > bestAccuracy){
         bestAccuracy <- modelAccuracy
@@ -221,17 +224,21 @@ knn.optimisation <- function(trainSet, testSet, trainCl, testCl, n, scalingMetho
   ##trainCl: Training set of factors
   ##testCl: Training set of factors
 #Returns:Knn model and cross table display
-cross_table_knn <- function(trainSet, testSet, trainCl, testCl, k){
+cross_table_knn <- function(trainSet, 
+                            testSet, 
+                            trainCl, 
+                            testCl, 
+                            k){
   #Remove the class variable of the train and test sets
   trainSet.knn <- trainSet[, -ncol(trainSet)]
   testSet.knn <- testSet[, -ncol(testSet)]
-  
   #Create model with scaled data
   model.k <- knn(trainSet.knn, testSet.knn, trainCl, k)
-  
   #Cross table
-  cross.table <- CrossTable(testCl, model.k, prop.chisq=FALSE, prop.t=FALSE, prop.c=FALSE, prop.r=FALSE)
-  return(list(cross.table = cross.table, model.k = model.k))
+  cross.table <- CrossTable(testCl, model.k, prop.chisq=FALSE, 
+                            prop.t=FALSE, prop.c=FALSE, prop.r=FALSE)
+  return(list(cross.table = cross.table, 
+              model.k = model.k))
 }
 
 
@@ -253,7 +260,11 @@ cross_table_knn <- function(trainSet, testSet, trainCl, testCl, k){
   ##model: Trained model
   ##misclas: Vector of misclassification, one per class
 
-model.run <- function(AllData, predict, perc_predict, times, operation){  
+model.run <- function(AllData, 
+                      predict, 
+                      perc_predict, 
+                      times, 
+                      operation){  
   set.seed(8)
   #Preserve correspondance between numerical and categorical data (predictor and response respectively)
   trainIndex <- createDataPartition(predict, p = perc_predict,
@@ -261,11 +272,9 @@ model.run <- function(AllData, predict, perc_predict, times, operation){
                                     times = times)
   #List of accuracies init
   accuracies <- c()
-
   #Initialise vevctors sums of number and proportion of misclassifications
   mis_nb_sum <- c(0,0,0)
   mis_prop_sum <- c(0,0,0)
-  
   #For each partition
   for (i in 1:times){
     #Split data into train and test sets
@@ -273,19 +282,17 @@ model.run <- function(AllData, predict, perc_predict, times, operation){
     testSet <- AllData[-trainIndex[,i],]
     trainCl <- trainSet[,ncol(trainSet)]
     testCl <- testSet[,ncol(testSet)]
-    
     #Train the model
     model = operation(trainSet, trainCl, testSet, testCl)
-    
     #Calculate cumulative natrix
     confusion.matrix <- confusionMatrix(model, testCl, positive="1")
     #Calculate model accuracy
     modelAccuracy <- confusion.matrix$overall[1]
     #Store accuracy in list
     accuracies<-c(accuracies, modelAccuracy)
-    
     #Calculate cross table
-    cross.table <- CrossTable(testCl, model, prop.chisq=FALSE, prop.t=FALSE, prop.c=FALSE, prop.r=FALSE)
+    cross.table <- CrossTable(testCl, model, prop.chisq=FALSE, prop.t=FALSE, 
+                              prop.c=FALSE, prop.r=FALSE)
     #Calculate missclassifications
     misclas <- misclassification(cross.table, mis_nb_sum, mis_prop_sum)
     mis_nb_sum <- misclas$mis_nb_sum
@@ -328,7 +335,11 @@ cumulative.mean.accuracy <- function(accuracies){
   ##bestCrossTable: Cross table of the optimised model,
   ##bestConfusionMatrix: Confusion matrix of the optimised model
 
-svm.optimisation <- function(trainSet, testSet, trainCl, testCl, kernel){
+svm.optimisation <- function(trainSet, 
+                             testSet, 
+                             trainCl, 
+                             testCl, 
+                             kernel){
   #Variable initialisation
   bestAccuracy <- 0
   currentAccuracy <- 0
@@ -337,15 +348,12 @@ svm.optimisation <- function(trainSet, testSet, trainCl, testCl, kernel){
   bestConfusionMatrix <- c()
   bestCrossTable <- c()
   bestPrediction <- c()
-    
   for (kernel_type in kernel){
     model_svm <- ksvm(sensory ~ ., data=trainSet, kernel=kernel_type, C=1)
     kernel.predicted <- predict(model_svm, testSet, type="response")
-    
     #Accuracy calculation
     kernel.confusion.matrix <- confusionMatrix(kernel.predicted, testCl, positive="1")
     modelAccuracy <- kernel.confusion.matrix$overall[1]
-    
     #If current accuracy is the best, update best accuracy
     if(modelAccuracy > bestAccuracy){
       bestAccuracy <- modelAccuracy
@@ -353,11 +361,9 @@ svm.optimisation <- function(trainSet, testSet, trainCl, testCl, kernel){
       bestModel <- model_svm
       bestPrediction <- kernel.predicted
       bestConfusionMatrix <- kernel.confusion.matrix
-      
       #Calculate cross table
-      bestCrossTable <- CrossTable(testCl, kernel.predicted, 
-                                prop.chisq=FALSE, prop.t=FALSE, prop.c=FALSE, 
-                                prop.r=FALSE)
+      bestCrossTable <- CrossTable(testCl, kernel.predicted,prop.chisq=FALSE, 
+                                   prop.t=FALSE, prop.c=FALSE, prop.r=FALSE)
     }
   }
   return(list(bestAccuracy = bestAccuracy,
@@ -371,6 +377,12 @@ svm.optimisation <- function(trainSet, testSet, trainCl, testCl, kernel){
 
 ########### Random forest ########
 #Define a class and a learner
+#Arguments:
+  ##AllData: Data of interest
+#Return list:
+  ##rf_task: Task defined for data of interest, for class sensory
+  ##learner: Classifier random forest
+  ##plt: Plot of classes frequency
 rf_class_learner <- function(AllData){
   #Define a task
   rf_task = as_task_classif(sensory~., data=AllData)
@@ -383,15 +395,38 @@ rf_class_learner <- function(AllData){
   ggsave(file= paste("Plots/RandomForest_", main, ".png"))
   #Set the learner for classify random forest
   learner = lrn("classif.randomForest")
-  return(list(rf_task = rf_task, learner = learner, plt = plt))
+  return(list(rf_task = rf_task, 
+              learner = learner, 
+              plt = plt))
 }
 
 
-#Model tuning
-rf_tuning <- function(ntree_min, ntree_max, mtry_min, mtry_max,nodesize_min, nodesize_max, 
-                      maxnodes_min, maxnodes_max, nb_evaluation,
-                      part_ratio, task_rf, AllData
+#Model tuning for random forest
+#Arguments:
+  ##ntree_min, ntree_max: Minimal and maximal numbers of trees in the forest
+  ##mtry_min, mtry_max: Minimal and maximal numbers of features to sample at each node
+  ##nodesize_min, nodesize_max: Minimal and maximal number of cases authorised in a leaf
+  ##maxnodes_min, maxnodes_max: Minimal and maximal numbers of nodes
+  ##nb_evaluation: Budget allocation for tuning
+  ##part_ratio: Ratio of training data
+  ##task_rf: Task 
+  ##AllData: Data of interest
+#Return list:
+  ##instance: Object of function that estimates performance of parameters
+  ##learner_tun: Tuned learner 
+  ##split: Partition of data
+  ##task_train: Training of model with data AllData, and sensory
+  
+rf_tuning <- function(ntree_min, ntree_max, 
+                      mtry_min, mtry_max,
+                      nodesize_min, nodesize_max, 
+                      maxnodes_min, maxnodes_max, 
+                      nb_evaluation,
+                      part_ratio, 
+                      task_rf, 
+                      AllData
                       ){
+  #Tune the learner, for classifier random forest, with hyperparameters of interest
   learner_tun = lrn("classif.randomForest",
                     ntree = to_tune(ntree_min, ntree_max),
                     mtry = to_tune(mtry_min, mtry_max),
@@ -412,7 +447,7 @@ rf_tuning <- function(ntree_min, ntree_max, mtry_min, mtry_max,nodesize_min, nod
   train_Set <- AllData[split$train,]
   task_train <- as_task_classif(sensory~., data = train_Set)
   #Construct tunning instance single criterion 
-  #(store objective function that estimate eprformance of hyperparameters)
+  #(store objective function that estimate performance of hyperparameters)
   instance = ti(task = task_train,
                 learner = learner_tun,
                 resampling = resampling,
@@ -425,13 +460,22 @@ rf_tuning <- function(ntree_min, ntree_max, mtry_min, mtry_max,nodesize_min, nod
   #Initiate tuning process
   tuner$optimize(instance)
   return(list(instance = instance,
-         learner_tun = learner_tun, split = split,
+         learner_tun = learner_tun, 
+         split = split,
          task_train = task_train))
   
 }
 
-#Build final mode
-built_model <- function(learner_tun, instance, task_train){
+#Build final model
+#Arguments:
+  ##learner_tun: Tuned learner
+  ##instance: Object of function that estimates performance of parameters
+  ##task_train: Trained task
+#Returns:
+  ##learner_tun: tuned learner
+built_model <- function(learner_tun, 
+                        instance, 
+                        task_train){
   learner_tun$param_set$values = instance$result_learner_param_vals
   learner_tun$train(task_train)
   learner_tun$model
@@ -439,64 +483,89 @@ built_model <- function(learner_tun, instance, task_train){
 }
 
 #Test model performances
-rf_test <- function(task_rf, learner, part_ratio, split, title){
+#Arguments:
+  ##task_rf: Task to test
+  ##learner
+  ##part-ratio: Percentage of training data
+  ##split: Partition of data
+  ##title: Title of frequency plot
+#Returns:
+  ##accuracy: Accuracy of prediction
+  ##conf_matrix: Confusion matrix of prediction
+  ##plt: Frequency plot
+rf_test <- function(task_rf, 
+                    learner, 
+                    part_ratio, 
+                    split, 
+                    title){
   prediction = learner$predict(task_rf, split$test)
-  
   #Classification accuracy
   measure = msr("classif.acc")
   accuracy <- prediction$score(measure)
-  
   #Confusion matrix
   conf_matr <- prediction$confusion
-  
   #Inspect the frequency of each class 
   plt <- autoplot(prediction)+
     ggtitle(paste("Frequency plot random forest", title))
-  
   #Save frequency plot
   ggsave(file= paste("Plots/Test_RandomForest_", title, ".png"))
-  return(list(accuracy = accuracy, conf_matr = conf_matr, plt = plt))
+  return(list(accuracy = accuracy, 
+              conf_matr = conf_matr, 
+              plt = plt))
 }
 
 
 #Train and test random forest
+#Arguments:
+  #task: Task to train and test
+  ##times: Number of iterations
+  ##learner: Learner
+  ##ratio: Percentage of data in train set
+#Returns list:
+  ##accuracies: List of accuracies for every iteration
+  ##Misclas: List of misclassifications, for each iteration
 run_rf <- function(task, times, learner, ratio){
   accuracies <- c()
   #List of accuracies init
   accuracies <- c()
-  #Initialise vectors sums of number and proportions of misclassification
+  #Initialise vectors sums of number and proportions of misclassifications
   mis_nb_sum <- c(0,0,0)
   mis_prop_sum <- c(0,0,0)
-  
   set.seed(8)
   #For each iteration
   for (i in 1:times){
     split = partition(task, ratio = ratio)
-    
     #Model training
     learner$train(task, split$train)
     prediction = learner$predict(task, split$test)
-    
     #Classification accuracy
     measure = msr("classif.acc")
     accuracy <- prediction$score(measure)
     accuracies <- append(accuracies, accuracy)
-    
     #Calculate confusion matrix
     conf_matr <- prediction$confusion
-    
     #Calculate missclassifications
     misclas <- misclassification_confMatrix(conf_matr, mis_nb_sum, mis_prop_sum)
     mis_nb_sum <- misclas$mis_nb_sum
     mis_prop_sum <- misclas$mis_prop_sum
   }
-  return(list(accuracies = accuracies, misclas = misclas))
+  return(list(accuracies = accuracies, 
+              misclas = misclas))
 }
 
 
 ######## Question1 #########
-#Plots of cumulative accuracy means for each dataset and classification method
-cumulative_plot <-  function(cum_mean_knn, cum_mean_rf, cum_mean_svm, dataset){
+#Create and save plots of cumulative accuracy means 
+#for each analytical platform and classification method
+#Arguments:
+  ##cum_mean_knn: Cumulative mean accuracy for knn
+  ##cum_mean_rf: Cumulative mean accuracy for rf
+  ##cum_mean_svm: Cumulative mean accuracy for svm
+  ##dataset: Analytical platform
+cumulative_plot <-  function(cum_mean_knn, 
+                             cum_mean_rf, 
+                             cum_mean_svm, 
+                             dataset){
   #Data frame containing all cumulative means
   accuracy_cumulative_means <- data.frame(cum_mean_knn,
                                           cum_mean_rf,
@@ -514,10 +583,18 @@ cumulative_plot <-  function(cum_mean_knn, cum_mean_rf, cum_mean_svm, dataset){
 
 ####### Question2 #########
 ## Calculate number and proportion of misclassifications (FP and FN) in crosstable
-misclassification <- function(CrossTable, mis_nb_sum, mis_prop_sum){
+#Arguments
+  ##CrossTable: Crosstable of interest
+  ##mis_nb_sum: Vector of number of missclassification for each class
+  ##mis_prop_sum: Vector of proportions for each classe (one value per class)
+#Returns list:
+  ##mis_nb_sum: Vector of sum of number of missclassification for each class (one value per class)
+  ##mis_prop_sum: Vector of sum of proportions for each classe (one value per class)
+misclassification <- function(CrossTable, 
+                              mis_nb_sum, 
+                              mis_prop_sum){
   nb_crossTable <- CrossTable$t
   prop_crossTable <- CrossTable$prop.tbl
-  
   for (i in 1:nrow(nb_crossTable)){ #i is the value of the actual class
     #If j and i are equal, the classification is right (predicted = actual)
     for (j in 1:ncol(nb_crossTable)){
@@ -534,10 +611,16 @@ misclassification <- function(CrossTable, mis_nb_sum, mis_prop_sum){
 }
 
 #Calculate misclassifications with a confusion matrix
+#Arguments:
+  ##confMatrix: Confusion matrix containing FP and FN
+  ##mis-nb_sum: Vector of number of missclassification for each class
+  ##mis_prop_sum: Vector of proportions for each classe (one value per class)
+#Returns list:
+  ##mis_nb_sum: Vector of sum of number of missclassification for each class (one value per class)
+  ##mis_prop_sum: Vector of sum of proportions for each classe (one value per class)
 misclassification_confMatrix <- function(confMatrix, mis_nb_sum, mis_prop_sum){
   nb_crossTable <- confMatrix
   total = 0
-  
   for (i in 1:nrow(nb_crossTable)){ #i is the value of the actual class
     #If j and i are equal, the classification is right (predicted = actual)
     for (j in 1:ncol(nb_crossTable)){
@@ -556,6 +639,9 @@ misclassification_confMatrix <- function(confMatrix, mis_nb_sum, mis_prop_sum){
 }
 
 #Create barplot of misclassified proportions
+#Arguments:
+  ##list_misclassified: List of sum of proportions of missclassifications
+  #titleList: Title of the barplot
 misclassified_proportion_barplot <- function(list_misclassified, titleList){
   i <- 0
   for (proportion in list_misclassified){
@@ -575,9 +661,24 @@ misclassified_proportion_barplot <- function(list_misclassified, titleList){
 
 ############# 3. Variables importance #########
 #Returns variable importance for knn
-var_importance <- function(AllData, predictor, perc_predict, times, formula, method, tuneGrid){
+#Arguments:
+  ##AllData: Dataset 
+  ##predictor: Predictor
+  ##perc_predict: Ratio of training data
+  ##times: Number of iterations
+  ##formula: Formula for training
+  ##method: Classification method
+  ##tuneGrid: Grid search
+#Returns:
+  ##Imp: Dataframe of importance of the variables
+var_importance <- function(AllData, 
+                           predictor, 
+                           perc_predict, 
+                           times, 
+                           formula, 
+                           method, 
+                           tuneGrid){
   part <- partition_data(AllData, predictor, perc_predict, times)
-  
   #Train the model
   model.fit <- caret::train(formula, method = method, data = part$trainSet,
                             tuneGrid = tuneGrid)
@@ -586,18 +687,39 @@ var_importance <- function(AllData, predictor, perc_predict, times, formula, met
 }
 
 #Returns variables importance for random forest
-rf_var_importance <- function(AllData, predict, perc_predict, times,
-                              ntree, mtry, nodesize, maxnodes){
+#Arguments:
+  ##AllData: Dataset
+  ##perc_predict: Ratio of training data
+  ##times: Number of iterations
+  ##ntree: Number of trees in the forest
+  ##mtry: Number of features to sample at each node
+  ##nodesize: Number of cases authorised in a leaf
+  ##maxnodes: Maximal numbers of nodes
+#Returns:
+  ##Imp: Dataframe of variables importance
+rf_var_importance <- function(AllData, 
+                              predict, 
+                              perc_predict, 
+                              times,
+                              ntree, 
+                              mtry, 
+                              nodesize, 
+                              maxnodes){
   part <- partition_data(AllData, predict, perc_predict, times)
   randomF <- randomForest(sensory~., data=part$trainSet, importance = TRUE, 
                           ntree = ntree, mtry = mtry, nodesize = nodesize, maxnodes = 20L)
-  
   Imp <- as.data.frame(varImp(randomF))
   return(Imp)
 }
 
 #Make a plot showing variables importance for each class
-importance_plot <- function(importance, name){
+#Arguments:
+  ##importance: Data frame of variable importances
+  ##name: Name of the plot
+#Returns:
+  #plot: Plot of variables importance
+importance_plot <- function(importance, 
+                            name){
   Imp <- data.frame(feature = rownames(importance), importance)
   #Reshape the data
   Imp <- melt(Imp[,c("feature", "X1", "X2", "X3")], id.vars = 1)

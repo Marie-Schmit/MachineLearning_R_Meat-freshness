@@ -611,6 +611,8 @@ knn_HPLC_TVC <- run_reg_model_iteration(AllData = AllData_HPLC_counts,
                                         preProcess = c("center","scale"))
 #Mean of RMSE for 100 iterations
 knn_HPLC_TVC$mean_RMSE
+knn_HPLC_TVC$sd_RMSE
+knn_HPLC_TVC$CI_RMSE
 ```
 Plot observed against predicted data for knn, HPLC, TVC
 ```{r}
@@ -632,6 +634,10 @@ knn_reg_HPLC_Pseudo <- run_reg_model_iteration(AllData = AllData_HPLC_counts,
                                                preProcess = c("center","scale"))
 #Mean of RMSE for 100 iterations
 knn_reg_HPLC_Pseudo$mean_RMSE
+#sd of RMSE
+knn_reg_HPLC_Pseudo$sd_RMSE
+#95% CI of RMSE
+knn_reg_HPLC_Pseudo$CI_RMSE
 ```
 Plot observed against predicted data for knn, HPLC, Pseudomonads
 ```{r}
@@ -651,8 +657,13 @@ knn_reg_enose_TVC <- run_reg_model_iteration(AllData = AllData_enose_counts,
                                              bacteria = "TVC",
                                              tuneGrid = expand.grid(k = 1:20), 
                                              preProcess = c("center","scale"))
+
 #Mean of RMSE for 100 iterations
 knn_reg_enose_TVC$mean_RMSE
+#sd of RMSE
+knn_reg_enose_TVC$sd_RMSE
+#95% of RMSE
+knn_reg_enose_TVC$CI_RMSE
 ```
 Plot observed against predicted data for knn, enose, TVC
 ```{r}
@@ -675,6 +686,10 @@ knn_reg_enose_Pseudo <- run_reg_model_iteration(AllData = AllData_enose_counts,
                                                 preProcess = c("center","scale"))
 #Mean of RMSE for 100 iterations
 knn_reg_enose_Pseudo$mean_RMSE
+#sd of RMSE
+knn_reg_enose_Pseudo$sd_RMSE
+#95% CI of RMSE
+knn_reg_enose_Pseudo$CI_RMSE
 ```
 Plot observed against predicted data for knn, enose, pseudomonads
 ```{r}
@@ -754,52 +769,52 @@ START Discard !!!
 ________________________________________________________________________________________
 
 ```{r}
-#rf for HPLC, TVC
-tun_rf_HPLC_tvc <- run_reg_model_iteration(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "rf", bacteria = "TVC", 
-                        tuneGrid = expand.grid(mtry = 2:19))
-
-#Display best tune for random forest
-tun_rf_HPLC_tvc$model.fit$bestTune
-tun_rf_HPLC_tvc$model.fit
-tun_rf_HPLC_tvc$mean_RMSE
+# #rf for HPLC, TVC
+# tun_rf_HPLC_tvc <- run_reg_model_iteration(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "rf", bacteria = "TVC", 
+#                         tuneGrid = expand.grid(mtry = 2:19))
+# 
+# #Display best tune for random forest
+# tun_rf_HPLC_tvc$model.fit$bestTune
+# tun_rf_HPLC_tvc$model.fit
+# tun_rf_HPLC_tvc$mean_RMSE
 ```
 
 ```{r}
-#rf for HPLC, Pseudomonads
-tun_rf_HPLC_Pseudo <- run_reg_model_iteration(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "rf", bacteria = "Pseudomonads", 
-                        tuneGrid = expand.grid(mtry = 2:19))
-
-#Display best tune for random forest
-tun_rf_HPLC_Pseudo$model.fit$bestTune
-tun_rf_HPLC_Pseudo$model.fit
-tun_rf_HPLC_Pseudo$mean_RMSE
+# #rf for HPLC, Pseudomonads
+# tun_rf_HPLC_Pseudo <- run_reg_model_iteration(AllData = AllData_HPLC_counts, perc_pred = .7, times = 1, method = "rf", bacteria = "Pseudomonads", 
+#                         tuneGrid = expand.grid(mtry = 2:19))
+# 
+# #Display best tune for random forest
+# tun_rf_HPLC_Pseudo$model.fit$bestTune
+# tun_rf_HPLC_Pseudo$model.fit
+# tun_rf_HPLC_Pseudo$mean_RMSE
 ```
 
 ### Train and predict random forest for 100 iterations
 For enose, apply random forest (rf) regression, tuning for parameter mtry
 ```{r}
-#rf for enose, TVC
-tun_rf_enose_tvc <- run_reg_model_iteration(AllData = AllData_enose_counts, 
-                                            perc_pred = .7, times = 1, 
-                                            method = "rf", bacteria = "TVC", 
-                                            tuneGrid = expand.grid(mtry = 2:9), 
-                                            preProcess = c("center","scale"))
-
-#Display best tune for random forest
-tun_rf_enose_tvc$model.fit$bestTune
-tun_rf_enose_tvc$model.fit
-tun_rf_enose_tvc$mean_RMSE
+# #rf for enose, TVC
+# tun_rf_enose_tvc <- run_reg_model_iteration(AllData = AllData_enose_counts, 
+#                                             perc_pred = .7, times = 1, 
+#                                             method = "rf", bacteria = "TVC", 
+#                                             tuneGrid = expand.grid(mtry = 2:9), 
+#                                             preProcess = c("center","scale"))
+# 
+# #Display best tune for random forest
+# tun_rf_enose_tvc$model.fit$bestTune
+# tun_rf_enose_tvc$model.fit
+# tun_rf_enose_tvc$mean_RMSE
 ```
 
 ```{r}
-#rf for enose, Pseudomonads
-tun_rf_enose_Pseudo <- run_reg_model_iteration(AllData = AllData_enose_counts, perc_pred = .7, times = 1, method = "rf", bacteria = "Pseudomonads", 
-                        tuneGrid = expand.grid(mtry = 2:9))
-
-#Display best tune for random forest
-tun_rf_enose_Pseudo$model.fit$bestTune
-tun_rf_enose_Pseudo$model.fit
-tun_rf_enose_Pseudo$mean_RMSE
+# #rf for enose, Pseudomonads
+# tun_rf_enose_Pseudo <- run_reg_model_iteration(AllData = AllData_enose_counts, perc_pred = .7, times = 1, method = "rf", bacteria = "Pseudomonads", 
+#                         tuneGrid = expand.grid(mtry = 2:9))
+# 
+# #Display best tune for random forest
+# tun_rf_enose_Pseudo$model.fit$bestTune
+# tun_rf_enose_Pseudo$model.fit
+# tun_rf_enose_Pseudo$mean_RMSE
 ```
 
 
@@ -824,6 +839,10 @@ run_rf_HPLC_TVC <- run_reg_model_iteration(AllData = AllData_HPLC_counts,
                                            preProcess = c("center","scale"))
 #Mean of RMSE for 100 iterations
 run_rf_HPLC_TVC$mean_RMSE
+#sd of RMSE
+run_rf_HPLC_TVC$sd_RMSE
+#CI of RMSE
+run_rf_HPLC_TVC$CI_RMSE
 ```
 
 Plot observed against predicted data for rf, HPLC, TVC
@@ -846,6 +865,10 @@ run_rf_HPLC_Pseudo <- run_reg_model_iteration(AllData = AllData_HPLC_counts,
                                               preProcess = c("center","scale"))
 #Mean of RMSE for 100 iterations
 run_rf_HPLC_Pseudo$mean_RMSE
+#sd of RMSE
+run_rf_HPLC_Pseudo$sd_RMSE
+#CI of RMSE
+run_rf_HPLC_Pseudo$CI_RMSE
 ```
 
 Plot observed against predicted data for rf, HPLC, pseudomonads
@@ -868,6 +891,10 @@ run_rf_enose_TVC <- run_reg_model_iteration(AllData = AllData_enose_counts,
                                             preProcess = c("center","scale"))
 #Mean of RMSE for 100 iterations
 run_rf_enose_TVC$mean_RMSE
+#sd of RMSE
+run_rf_enose_TVC$sd_RMSE
+#CI of RMSE
+run_rf_enose_TVC$CI_RMSE
 ```
 
 Plot observed against predicted data for rf, enose, TVC
@@ -890,6 +917,10 @@ run_rf_enose_Pseudo <- run_reg_model_iteration(AllData = AllData_enose_counts,
                                                preProcess = c("center","scale"))
 #Mean of RMSE for 100 iterations
 run_rf_enose_Pseudo$mean_RMSE
+#sd of RMSE
+run_rf_enose_Pseudo$sd_RMSE
+#CI of RMSE
+run_rf_enose_Pseudo$CI_RMSE
 ```
 
 Plot observed against predicted data for rf, enose, pseudomonads
