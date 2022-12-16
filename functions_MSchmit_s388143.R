@@ -686,7 +686,7 @@ var_importance <- function(AllData,
   model.fit <- caret::train(formula, method = method, data = part$trainSet,
                             tuneGrid = tuneGrid)
   Imp <- as.data.frame(varImp(model.fit)$importance)
-  return(list(Imp = Imp, finalModel = model.fit$finalModel, Results = model.fit$results))
+  return(list(Imp = Imp, model = model.fit))
 }
 
 #Returns variables importance for random forest
@@ -738,5 +738,23 @@ importance_plot <- function(importance,
     coord_flip()
   #Save plot
   ggsave(file= paste("Plots/Features_importance_", name, ".png"))
+  return(plot)
+}
+
+#Make a plot showing variables importance overall for every class
+#Arguments:
+##importance: Data frame of variable importances
+##name: Name of the plot
+#Returns:
+#plot: Plot of variables importance
+overall_importance_plot <- function(importance, 
+                            name){
+  #plot
+  plot <- ggplot(data = importance, aes(x = rownames(importance), y =  Overall))+
+    geom_bar(stat = "identity", width = 0.7)+
+    ggtitle(paste("Importance of each feature for every class", name)) + 
+    coord_flip()
+  #Save plot
+  ggsave(file= paste("Plots/Overall_Features_importance_", name, ".png"))
   return(plot)
 }

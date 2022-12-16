@@ -568,7 +568,7 @@ knn_var_importance_HPLC <- var_importance(AllData_HPLC_sens,
                                           sensory~., method = "knn", 
                                           tuneGrid = expand.grid(k = 1:20))
 #Importance plot HPLC data, knn
-importance_plot(knn_var_importance_HPLC, "HPLC, knn")
+importance_plot(knn_var_importance_HPLC$Imp, "HPLC, knn")
 
 #Enose data importances, knn
 knn_var_importance_enose <- var_importance(AllData_enose_sens,
@@ -576,7 +576,7 @@ knn_var_importance_enose <- var_importance(AllData_enose_sens,
                                            sensory~., method = "knn", 
                                            tuneGrid = expand.grid(k = 1:20))
 #Importance plot enose data, knn
-importance_plot(knn_var_importance_enose, "enose, knn")
+importance_plot(knn_var_importance_enose$Imp, "enose, knn")
 ```
 Variable importance for svm
 ```{r}
@@ -587,7 +587,7 @@ svm_var_importance_HPLC <- var_importance(AllData_HPLC_sens,
                                           sensory~., method = "svmRadial", 
                                           tuneGrid = NULL)
 #Importance plot, HPLC, svm
-importance_plot(svm_var_importance_HPLC, "HPLC, svm")
+importance_plot(svm_var_importance_HPLC$Imp, "HPLC, svm")
 
 #Enose data importances, svm
 svm_var_importance_enose <- var_importance(AllData_enose_sens,
@@ -595,7 +595,25 @@ svm_var_importance_enose <- var_importance(AllData_enose_sens,
                                            sensory~., method = "svmRadial", 
                                            tuneGrid = NULL)
 #Importance plot, enose, svm
-importance_plot(svm_var_importance_enose, "enose, svm")
+importance_plot(svm_var_importance_enose$Imp, "enose, svm")
+```
+Overall variable importance for random forest
+```{r}
+#Return table of variables importance for HPLC
+overall_rf_var_importance_HPLC <- var_importance(AllData_HPLC_sens,
+                                          AllData_HPLC_sens$sensory, .7, 1,
+                                          sensory~., method = "rf", 
+                                          tuneGrid = expand.grid(mtry = 2:19))
+#Importance plot
+overall_importance_plot(overall_rf_var_importance_HPLC$Imp, "HPLC, rf")
+
+#Variables importance for enose
+overall_rf_var_importance_enose <- var_importance(AllData_enose_sens,
+                                             AllData_enose_sens$sensory,0.7, 1,
+                                             sensory~., method = "rf", 
+                                             tuneGrid = expand.grid(mtry = 2:8))
+#Importance plot
+overall_importance_plot(overall_rf_var_importance_enose$Imp, "enose, rf")
 ```
 
 Variable importance for random forest
